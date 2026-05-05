@@ -58,7 +58,7 @@
         <div ref="feedbackStatusRef" class="chart"></div>
       </article>
 
-      <article class="chart-card wide">
+      <article class="chart-card">
         <div class="section-head">
           <h2>命中率变化趋势</h2>
           <span>衡量知识库覆盖效果</span>
@@ -96,9 +96,17 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import * as echarts from 'echarts'
-import { chatLogs, dashboardData } from '../../mock/mockData'
+import {
+  getCategoryRatio,
+  getDailyTrend,
+  getFeedbackStatus,
+  getHitRateTrend,
+  getHotQuestions,
+  getOverview,
+  getUnmatched
+} from '../../api/dashboard'
 
 const dailyTrendRef = ref()
 const hotQuestionRef = ref()
@@ -106,6 +114,21 @@ const categoryRatioRef = ref()
 const feedbackStatusRef = ref()
 const hitRateRef = ref()
 const chartInstances = []
+const dashboardData = reactive({
+  overview: {
+    totalConsultCount: 0,
+    todayConsultCount: 0,
+    hitRate: 0,
+    helpfulRate: 0,
+    pendingFeedback: 0
+  },
+  dailyTrend: [],
+  hotQuestions: [],
+  categoryRatio: [],
+  feedbackStatus: [],
+  hitRateTrend: [],
+  unmatchedQuestions: []
+})
 
 const palette = ['#1178ff', '#13bea7', '#7c6cff', '#ffb020', '#ff6b6b', '#20b486', '#56a9ff']
 
@@ -149,21 +172,12 @@ const metrics = computed(() => [
 ])
 
 const unmatchedList = computed(() => {
-  const missedLogs = chatLogs.filter((item) => item.hitStatus === '未命中')
-  const fallback = dashboardData.unmatchedQuestions.map((item, index) => ({
+  return dashboardData.unmatchedQuestions.map((item, index) => ({
     id: `u-${index}`,
     question: item.question,
-    createdAt: '2026-04-29 10:00',
+    createdAt: '-',
     similarity: 0.42,
-    suggestion: `补充“${item.category}”分类标准问答`
-  }))
-
-  return (missedLogs.length ? missedLogs : fallback).map((item) => ({
-    id: item.id,
-    question: item.question,
-    createdAt: item.createdAt,
-    similarity: item.similarity,
-    suggestion: item.category ? `建议补充“${item.category}”知识点并重建向量库` : item.suggestion
+    suggestion: item.category ? `建议补充“${item.category}”知识点并重建向量库` : `出现 ${item.count} 次，建议补充标准问答`
   }))
 })
 
@@ -174,20 +188,22 @@ const baseTooltip = {
   textStyle: { color: '#fff' }
 }
 
-const createLineOption = ({ name, data, color, yFormatter }) => ({
+const createLineOption = ({ name, data, color, yFormatter, xData, yMin, yMax }) => ({
   color: [color],
-  grid: { top: 30, left: 42, right: 18, bottom: 32 },
+  grid: { top: 32, left: 18, right: 24, bottom: 28, containLabel: true },
   tooltip: baseTooltip,
   xAxis: {
     type: 'category',
-    boundaryGap: false,
-    data: dashboardData.dailyTrend.map((item) => item.date),
+    boundaryGap: true,
+    data: xData || dashboardData.dailyTrend.map((item) => item.date),
     axisTick: { show: false },
     axisLine: { lineStyle: { color: '#d9e6f0' } },
     axisLabel: { color: '#6b7c93' }
   },
   yAxis: {
     type: 'value',
+    min: yMin,
+    max: yMax,
     axisLabel: {
       color: '#6b7c93',
       formatter: yFormatter || '{value}'
@@ -201,6 +217,7 @@ const createLineOption = ({ name, data, color, yFormatter }) => ({
       smooth: true,
       symbolSize: 8,
       data,
+      clip: true,
       lineStyle: { width: 4 },
       itemStyle: { borderColor: '#fff', borderWidth: 2 },
       areaStyle: {
@@ -222,6 +239,7 @@ const initChart = (el, option) => {
 
 const renderCharts = async () => {
   await nextTick()
+  chartInstances.splice(0).forEach((chart) => chart.dispose())
 
   initChart(
     dailyTrendRef.value,
@@ -299,9 +317,12 @@ const renderCharts = async () => {
     hitRateRef.value,
     createLineOption({
       name: '命中率',
+      xData: dashboardData.hitRateTrend.map((item) => item.date),
       data: dashboardData.hitRateTrend.map((item) => item.hitRate),
       color: '#13bea7',
-      yFormatter: '{value}%'
+      yFormatter: '{value}%',
+      yMin: 0,
+      yMax: 100
     })
   )
 }
@@ -310,8 +331,29 @@ const resizeCharts = () => {
   chartInstances.forEach((chart) => chart.resize())
 }
 
-onMounted(() => {
-  renderCharts()
+const loadDashboardData = async () => {
+  const [overview, dailyTrend, hotQuestions, hitRateTrend, categoryRatio, feedbackStatus, unmatched] = await Promise.all([
+    getOverview(),
+    getDailyTrend(),
+    getHotQuestions(),
+    getHitRateTrend(),
+    getCategoryRatio(),
+    getFeedbackStatus(),
+    getUnmatched()
+  ])
+
+  dashboardData.overview = overview.data || dashboardData.overview
+  dashboardData.dailyTrend = dailyTrend.data || []
+  dashboardData.hotQuestions = hotQuestions.data || []
+  dashboardData.hitRateTrend = hitRateTrend.data || []
+  dashboardData.categoryRatio = categoryRatio.data || []
+  dashboardData.feedbackStatus = feedbackStatus.data || []
+  dashboardData.unmatchedQuestions = unmatched.data || []
+}
+
+onMounted(async () => {
+  await loadDashboardData()
+  await renderCharts()
   window.addEventListener('resize', resizeCharts)
 })
 

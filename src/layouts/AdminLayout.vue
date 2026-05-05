@@ -54,7 +54,7 @@ import { Setting, SwitchButton } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 
-const adminName = localStorage.getItem('username') || 'admin'
+const adminName = sessionStorage.getItem('username') || 'admin'
 
 const menus = [
   { label: '工作台', path: '/admin/home', icon: 'Monitor' },
@@ -76,7 +76,7 @@ const handleLogout = async () => {
     confirmButtonText: '退出',
     cancelButtonText: '取消'
   })
-  localStorage.clear()
+  sessionStorage.clear()
   router.push('/login')
 }
 </script>

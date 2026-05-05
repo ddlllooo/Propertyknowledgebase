@@ -89,15 +89,39 @@
 </template>
 
 <script setup>
+import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, ChatDotRound, Search, Service } from '@element-plus/icons-vue'
-import { hotQuestions } from '../../mock/mockData'
+import { getCategories, getQaList } from '../../api/qa'
 
-const stats = [
-  { label: '知识库问题总数', value: '60', icon: 'Collection', color: 'linear-gradient(135deg, #1178ff, #54a7ff)' },
-  { label: '今日咨询量', value: '28', icon: 'ChatLineRound', color: 'linear-gradient(135deg, #13bea7, #5fd8c9)' },
-  { label: '热门分类', value: '6', icon: 'Grid', color: 'linear-gradient(135deg, #7c6cff, #9f94ff)' },
-  { label: '回答有帮助率', value: '88%', icon: 'CircleCheck', color: 'linear-gradient(135deg, #ffb020, #ffd26f)' }
-]
+const qaRecords = ref([])
+const categories = ref([])
+
+const stats = computed(() => [
+  {
+    label: '知识库问题总数',
+    value: qaRecords.value.length,
+    icon: 'Collection',
+    color: 'linear-gradient(135deg, #1178ff, #54a7ff)'
+  },
+  {
+    label: '今日咨询量',
+    value: '-',
+    icon: 'ChatLineRound',
+    color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
+  },
+  {
+    label: '热门分类',
+    value: categories.value.length,
+    icon: 'Grid',
+    color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
+  },
+  {
+    label: '回答有帮助率',
+    value: '-',
+    icon: 'CircleCheck',
+    color: 'linear-gradient(135deg, #ffb020, #ffd26f)'
+  }
+])
 
 const entries = [
   { title: '在线知识库', desc: '按关键词和分类快速查找标准答案', icon: 'Collection', path: '/user/knowledge' },
@@ -105,14 +129,18 @@ const entries = [
   { title: '我的咨询记录', desc: '查看历史问题、命中状态和人工处理情况', icon: 'Clock', path: '/user/history' }
 ]
 
-const quickCategories = [
-  { name: '物业缴费', type: 'primary' },
-  { name: '报修服务', type: 'success' },
-  { name: '停车管理', type: 'warning' },
-  { name: '装修管理', type: 'info' },
-  { name: '生活服务', type: 'success' },
-  { name: '投诉建议', type: 'danger' }
-]
+const tagTypes = ['primary', 'success', 'warning', 'info', 'success', 'danger']
+
+const hotQuestions = computed(() =>
+  [...qaRecords.value].sort((a, b) => b.askCount - a.askCount).slice(0, 6).map((item) => item.question)
+)
+
+const quickCategories = computed(() =>
+  categories.value.map((item, index) => ({
+    name: item.name,
+    type: tagTypes[index % tagTypes.length]
+  }))
+)
 
 const goQuestion = (question) => {
   sessionStorage.setItem('knowledgeKeyword', question)
@@ -123,6 +151,15 @@ const goCategory = (category) => {
   sessionStorage.setItem('knowledgeCategory', category)
   window.location.href = '/user/knowledge'
 }
+
+onMounted(async () => {
+  const [qaResponse, categoryResponse] = await Promise.all([
+    getQaList({ page: 1, pageSize: 100 }),
+    getCategories()
+  ])
+  qaRecords.value = qaResponse.data?.list || []
+  categories.value = categoryResponse.data || []
+})
 </script>
 
 <style scoped>

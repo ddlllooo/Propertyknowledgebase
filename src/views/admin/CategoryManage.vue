@@ -108,10 +108,11 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { categoryList, qaList } from '../../mock/mockData'
+import { createCategory, deleteCategory, getCategoryList, updateCategory } from '../../api/adminCategory'
+import { getAdminQaList } from '../../api/adminQa'
 
 const keyword = ref('')
 const statusFilter = ref('全部')
@@ -119,7 +120,8 @@ const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const categoryFormRef = ref()
 
-const categories = ref(categoryList.map((item) => ({ ...item })))
+const categories = ref([])
+const qaTotal = ref(0)
 
 const createEmptyForm = () => ({
   id: null,
@@ -128,7 +130,7 @@ const createEmptyForm = () => ({
   questionCount: 0,
   sortOrder: categories.value.length + 1,
   status: '启用',
-  createdAt: '2026-04-29'
+  createdAt: new Date().toISOString().slice(0, 10)
 })
 
 const categoryForm = reactive(createEmptyForm())
@@ -161,7 +163,7 @@ const overviewCards = computed(() => [
   },
   {
     label: '问答总数',
-    value: qaList.length,
+    value: qaTotal.value,
     icon: 'Collection',
     color: 'linear-gradient(135deg, #ffb020, #ffd36e)'
   }
@@ -208,27 +210,29 @@ const openEditDialog = (row) => {
 const submitCategoryForm = async () => {
   await categoryFormRef.value.validate()
 
-  const payload = { ...categoryForm }
+  const payload = {
+    name: categoryForm.name,
+    description: categoryForm.description,
+    sortOrder: categoryForm.sortOrder,
+    status: categoryForm.status
+  }
 
   if (dialogMode.value === 'create') {
-    categories.value.push({
-      ...payload,
-      id: Math.max(...categories.value.map((item) => item.id), 0) + 1
-    })
+    await createCategory(payload)
     ElMessage.success('新增分类成功')
   } else {
-    const index = categories.value.findIndex((item) => item.id === payload.id)
-    if (index !== -1) {
-      categories.value[index] = payload
-    }
+    await updateCategory(categoryForm.id, payload)
     ElMessage.success('编辑分类成功')
   }
 
   dialogVisible.value = false
+  await fetchCategories()
 }
 
-const toggleStatus = (row) => {
-  row.status = row.status === '启用' ? '停用' : '启用'
+const toggleStatus = async (row) => {
+  const status = row.status === '启用' ? '停用' : '启用'
+  await updateCategory(row.id, { status })
+  row.status = status
   ElMessage.success(`已${row.status}该分类`)
 }
 
@@ -238,9 +242,24 @@ const handleDelete = async (row) => {
     confirmButtonText: '删除',
     cancelButtonText: '取消'
   })
-  categories.value = categories.value.filter((item) => item.id !== row.id)
+  await deleteCategory(row.id)
+  await fetchCategories()
   ElMessage.success('删除成功')
 }
+
+const fetchCategories = async () => {
+  const response = await getCategoryList()
+  categories.value = response.data || []
+}
+
+const fetchQaTotal = async () => {
+  const response = await getAdminQaList({ page: 1, pageSize: 1 })
+  qaTotal.value = response.data?.total || 0
+}
+
+onMounted(async () => {
+  await Promise.all([fetchCategories(), fetchQaTotal()])
+})
 </script>
 
 <style scoped>

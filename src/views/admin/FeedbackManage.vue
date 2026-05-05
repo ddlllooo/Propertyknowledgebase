@@ -173,16 +173,19 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight, Search } from '@element-plus/icons-vue'
-import { categoryList, feedbackList, qaList } from '../../mock/mockData'
+import { getCategoryList } from '../../api/adminCategory'
+import { feedbackToKnowledge, getFeedbackList, updateFeedbackStatus } from '../../api/adminFeedback'
+import { getAdminQaList } from '../../api/adminQa'
 
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
 const typeOptions = ['全部', '有帮助', '没帮助', '需要人工']
-const categoryOptions = categoryList.map((item) => item.name)
+const categoryOptions = ref([])
 
-const feedbackRecords = ref(feedbackList.map((item) => ({ ...item })))
+const feedbackRecords = ref([])
+const qaRecords = ref([])
 const detailVisible = ref(false)
 const processVisible = ref(false)
 const knowledgeVisible = ref(false)
@@ -252,7 +255,7 @@ const stats = computed(() => [
   }
 ])
 
-const keywordOptions = computed(() => [...new Set(qaList.flatMap((item) => item.keywords))])
+const keywordOptions = computed(() => [...new Set(qaRecords.value.flatMap((item) => item.keywords || []))])
 
 const filteredFeedback = computed(() => {
   const keyword = filters.keyword.trim().toLowerCase()
@@ -281,18 +284,29 @@ const openProcessDialog = (item) => {
   processVisible.value = true
 }
 
-const markProcessed = () => {
+const refreshFeedback = async () => {
+  const response = await getFeedbackList({ page: 1, pageSize: 200 })
+  feedbackRecords.value = response.data?.list || []
+}
+
+const markProcessed = async () => {
   if (!activeFeedback.value) return
-  activeFeedback.value.status = '已处理'
-  activeFeedback.value.adminReply = processRemark.value || '管理员已处理该反馈。'
+  await updateFeedbackStatus(activeFeedback.value.id, {
+    status: '已处理',
+    adminReply: processRemark.value || '管理员已处理该反馈。'
+  })
+  await refreshFeedback()
   processVisible.value = false
   ElMessage.success('已标记为已处理')
 }
 
-const markProcessedFromDetail = () => {
+const markProcessedFromDetail = async () => {
   if (!activeFeedback.value) return
-  activeFeedback.value.status = '已处理'
-  activeFeedback.value.adminReply = processRemark.value || '管理员已处理该反馈。'
+  await updateFeedbackStatus(activeFeedback.value.id, {
+    status: '已处理',
+    adminReply: processRemark.value || '管理员已处理该反馈。'
+  })
+  await refreshFeedback()
   detailVisible.value = false
   ElMessage.success('处理说明已保存')
 }
@@ -303,8 +317,11 @@ const ignoreFeedback = async (item) => {
     confirmButtonText: '忽略',
     cancelButtonText: '取消'
   })
-  item.status = '已忽略'
-  item.adminReply = '该反馈已忽略，暂不调整知识库。'
+  await updateFeedbackStatus(item.id, {
+    status: '已忽略',
+    adminReply: '该反馈已忽略，暂不调整知识库。'
+  })
+  await refreshFeedback()
   ElMessage.success('已忽略该反馈')
 }
 
@@ -321,7 +338,7 @@ const openKnowledgeDialog = (item) => {
 }
 
 const extractKeywords = (text) => {
-  const matched = categoryOptions.filter((item) => text.includes(item.slice(0, 2)))
+  const matched = categoryOptions.value.filter((item) => text.includes(item.slice(0, 2)))
   if (matched.length) return matched
   return activeFeedback.value?.category ? [activeFeedback.value.category] : []
 }
@@ -329,12 +346,27 @@ const extractKeywords = (text) => {
 const saveToKnowledgeBase = async () => {
   await knowledgeFormRef.value.validate()
   if (activeFeedback.value) {
-    activeFeedback.value.status = '已处理'
-    activeFeedback.value.adminReply = `已根据反馈补充知识库：${knowledgeForm.question}`
+    await feedbackToKnowledge(activeFeedback.value.id, {
+      question: knowledgeForm.question,
+      answer: knowledgeForm.answer,
+      category: knowledgeForm.category,
+      keywords: knowledgeForm.keywords
+    })
+    await refreshFeedback()
   }
   knowledgeVisible.value = false
   ElMessage.success('已加入知识库并标记反馈为已处理')
 }
+
+onMounted(async () => {
+  const [categoryResponse, qaResponse] = await Promise.all([
+    getCategoryList(),
+    getAdminQaList({ page: 1, pageSize: 200 })
+  ])
+  categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
+  qaRecords.value = qaResponse.data?.list || []
+  await refreshFeedback()
+})
 </script>
 
 <style scoped>

@@ -26,10 +26,11 @@
               <p>{{ message.content }}</p>
               <div v-if="message.meta" class="answer-meta">
                 <el-tag size="small">{{ message.meta.category }}</el-tag>
+                <span>来源：{{ message.meta.answerSource }}</span>
                 <span>参考问题：{{ message.meta.reference }}</span>
                 <span>相似度：{{ message.meta.similarity }}</span>
               </div>
-              <div v-if="message.role === 'ai'" class="feedback-actions">
+              <div v-if="message.canFeedback" class="feedback-actions">
                 <el-button size="small" text type="success" @click="openFeedback('有帮助', message)">
                   有帮助
                 </el-button>
@@ -48,10 +49,11 @@
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 3 }"
             resize="none"
+            :disabled="sending"
             placeholder="请输入您的物业服务问题"
-            @keydown.enter.prevent="sendMessage()"
+            @keydown="onTextareaKeydown"
           />
-          <el-button type="primary" :icon="Promotion" @click="sendMessage">发送</el-button>
+          <el-button type="primary" :icon="Promotion" :loading="sending" @click="sendMessage">发送</el-button>
         </div>
       </div>
 
@@ -101,10 +103,14 @@
 import { nextTick, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Promotion } from '@element-plus/icons-vue'
+import { sendQuestion } from '../../api/chat'
+import { createFeedback } from '../../api/feedback'
 
 const messageBoxRef = ref()
 const inputValue = ref('')
 const feedbackVisible = ref(false)
+const activeFeedbackMessage = ref(null)
+const sending = ref(false)
 const feedbackForm = reactive({
   type: '',
   content: ''
@@ -114,7 +120,8 @@ const messages = ref([
   {
     id: Date.now(),
     role: 'ai',
-    content: '您好，我是智慧物业助手。您可以直接问我物业缴费、报修、停车、装修等问题。'
+    content: '您好，我是智慧物业助手。您可以直接问我物业缴费、报修、停车、装修等问题。',
+    canFeedback: false
   }
 ])
 
@@ -125,64 +132,10 @@ const recommendedQuestions = [
   '装修施工时间有什么规定？'
 ]
 
-const answerRules = [
-  {
-    keywords: ['物业费'],
-    content: '物业费可通过物业服务中心、社区小程序、银行代扣或线上支付入口缴纳，线上缴费后可查询电子凭证。',
-    category: '物业缴费',
-    reference: '物业费可以通过哪些方式缴纳？',
-    similarity: '92%'
-  },
-  {
-    keywords: ['报修', '漏水'],
-    content: '如需报修，请在小程序提交故障位置、照片和联系方式。漏水等紧急情况请先关闭水阀，并拨打物业 24 小时值班电话。',
-    category: '报修服务',
-    reference: '家中漏水应该如何报修？',
-    similarity: '95%'
-  },
-  {
-    keywords: ['停车'],
-    content: '停车相关业务包括月租车位办理、临时车辆登记和车牌识别维护。月租车位需提交车辆信息并完成费用缴纳。',
-    category: '停车管理',
-    reference: '小区停车位如何办理月租？',
-    similarity: '90%'
-  },
-  {
-    keywords: ['装修'],
-    content: '装修前需提交装修申请、施工图纸、施工人员信息并签署装修管理协议，审核通过后方可进场施工。',
-    category: '装修管理',
-    reference: '装修前需要办理哪些手续？',
-    similarity: '93%'
-  }
-]
-
 const scrollToBottom = async () => {
   await nextTick()
   if (messageBoxRef.value) {
     messageBoxRef.value.scrollTop = messageBoxRef.value.scrollHeight
-  }
-}
-
-const resolveAnswer = (question) => {
-  const rule = answerRules.find((item) => item.keywords.some((keyword) => question.includes(keyword)))
-  if (rule) {
-    return {
-      content: rule.content,
-      meta: {
-        category: rule.category,
-        reference: rule.reference,
-        similarity: rule.similarity
-      }
-    }
-  }
-
-  return {
-    content: '您好，该问题暂未在知识库中找到明确答案，建议联系人工客服进一步核实。',
-    meta: {
-      category: '未命中',
-      reference: '暂无明确参考问题',
-      similarity: '38%'
-    }
   }
 }
 
@@ -201,24 +154,56 @@ const sendMessage = async (presetQuestion) => {
   inputValue.value = ''
   await scrollToBottom()
 
-  setTimeout(async () => {
-    const answer = resolveAnswer(question)
+  sending.value = true
+  try {
+    const response = await sendQuestion({ question })
+    const answer = response.data
     messages.value.push({
       id: Date.now() + 1,
       role: 'ai',
-      ...answer
+      content: answer.answer,
+      chatLogId: answer.chatLogId,
+      canFeedback: Boolean(answer.chatLogId),
+      meta: {
+        category: answer.category,
+        answerSource: answer.answerSource || '后端 RAG',
+        reference: answer.matchedQuestion || '暂无明确参考问题',
+        similarity: `${Math.round(answer.similarity * 100)}%`
+      }
     })
     await scrollToBottom()
-  }, 300)
+  } catch (error) {
+    ElMessage.error('问题发送失败')
+  } finally {
+    sending.value = false
+  }
 }
 
-const openFeedback = (type) => {
-  feedbackForm.type = type
+const onTextareaKeydown = (e) => {
+  if (e.isComposing) return
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
+}
+
+const openFeedback = (type, message) => {
+  activeFeedbackMessage.value = message
+  feedbackForm.type = type === '需要人工处理' ? '需要人工' : type
   feedbackForm.content = ''
   feedbackVisible.value = true
 }
 
-const submitFeedback = () => {
+const submitFeedback = async () => {
+  if (!activeFeedbackMessage.value?.chatLogId) {
+    ElMessage.warning('当前回答暂无法提交反馈')
+    return
+  }
+  await createFeedback({
+    chatLogId: activeFeedbackMessage.value.chatLogId,
+    feedbackType: feedbackForm.type,
+    suggestion: feedbackForm.content
+  })
   feedbackVisible.value = false
   ElMessage.success('反馈已提交')
 }

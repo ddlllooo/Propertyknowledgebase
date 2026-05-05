@@ -35,8 +35,7 @@
         </el-select>
         <el-select v-model="filters.status" placeholder="状态筛选">
           <el-option label="全部状态" value="全部" />
-          <el-option label="启用" value="启用" />
-          <el-option label="停用" value="停用" />
+          <el-option v-for="item in statusOptions" :key="item" :label="item" :value="item" />
         </el-select>
       </div>
 
@@ -78,7 +77,7 @@
         <el-table-column prop="askCount" label="咨询命中次数" width="126" />
         <el-table-column prop="status" label="状态" width="96">
           <template #default="{ row }">
-            <el-tag :type="row.status === '启用' ? 'success' : 'info'" round>{{ row.status }}</el-tag>
+            <el-tag :type="statusTagType(row.status)" round>{{ row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="updatedAt" label="更新时间" width="120" />
@@ -86,8 +85,8 @@
           <template #default="{ row }">
             <div class="table-actions">
               <el-button size="small" type="primary" link @click="openEditDialog(row)">编辑</el-button>
-              <el-button size="small" :type="row.status === '启用' ? 'warning' : 'success'" link @click="toggleStatus(row)">
-                {{ row.status === '启用' ? '停用' : '启用' }}
+              <el-button size="small" :type="row.status === '已发布' ? 'warning' : 'success'" link @click="toggleStatus(row)">
+                {{ row.status === '已发布' ? '停用' : '发布' }}
               </el-button>
               <el-button size="small" type="danger" link @click="handleDelete(row)">删除</el-button>
             </div>
@@ -112,14 +111,20 @@
         </el-form-item>
         <div class="form-grid">
           <el-form-item label="分类" prop="category">
-            <el-select v-model="qaForm.category" placeholder="请选择分类">
+            <el-select
+              v-model="qaForm.category"
+              filterable
+              allow-create
+              default-first-option
+              clearable
+              placeholder="请选择或输入分类"
+            >
               <el-option v-for="item in categoryOptions" :key="item" :label="item" :value="item" />
             </el-select>
           </el-form-item>
           <el-form-item label="状态" prop="status">
             <el-radio-group v-model="qaForm.status">
-              <el-radio-button label="启用" />
-              <el-radio-button label="停用" />
+              <el-radio-button v-for="item in statusOptions" :key="item" :label="item" />
             </el-radio-group>
           </el-form-item>
         </div>
@@ -144,28 +149,99 @@
         <el-button type="primary" @click="submitQaForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="importVisible" title="批量导入问答" width="860px">
+      <div class="import-tools">
+        <el-button :icon="Download" @click="downloadImportTemplate">下载导入模板</el-button>
+        <el-button type="primary" :icon="Upload" @click="triggerFileSelect">选择 CSV 文件</el-button>
+        <input
+          ref="fileInputRef"
+          class="hidden-file"
+          type="file"
+          accept=".csv,text/csv"
+          @change="handleImportFile"
+        />
+      </div>
+
+      <div class="import-note">
+        <span>模板需包含：标准问题（question）、标准答案（answer）、分类（category）、关键词（keywords）、来源（source）、状态（status）。</span>
+        <span>关键词可以填写多个，请用中文逗号、英文逗号或分号分隔。</span>
+      </div>
+
+      <el-alert
+        v-if="importErrors.length"
+        class="import-alert"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #title>
+          <span>{{ importErrors.slice(0, 3).join('；') }}</span>
+        </template>
+      </el-alert>
+
+      <el-table v-if="importRows.length" :data="importRows" max-height="360" stripe>
+        <el-table-column type="index" label="#" width="56" />
+        <el-table-column prop="question" label="标准问题" min-width="180" />
+        <el-table-column prop="category" label="分类" width="110" />
+        <el-table-column label="关键词" min-width="160">
+          <template #default="{ row }">{{ row.keywords.join('，') }}</template>
+        </el-table-column>
+        <el-table-column prop="source" label="来源" width="130" />
+        <el-table-column prop="status" label="状态" width="96" />
+      </el-table>
+
+      <div
+        v-else
+        class="import-drop-zone"
+        @click="triggerFileSelect"
+        @dragover.prevent
+        @drop.prevent="handleImportDrop"
+      >
+        <el-icon><Upload /></el-icon>
+        <strong>拖拽 CSV 文件到这里</strong>
+        <span>也可以点击此区域选择填写后的 CSV 文件</span>
+      </div>
+
+      <template #footer>
+        <el-button @click="importVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" :disabled="!importRows.length" @click="submitImportRows">
+          导入 {{ importRows.length }} 条
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
-import { categoryList, qaList } from '../../mock/mockData'
+import { Download, Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
+import { createQa, deleteQa, getAdminQaList, updateQa } from '../../api/adminQa'
+import { getCategoryList } from '../../api/adminCategory'
+import { rebuildVector } from '../../api/vector'
 
-const today = '2026-04-29'
-const categoryOptions = categoryList.map((item) => item.name)
+const categoryRecords = ref([])
+const statusOptions = ['已发布', '草稿', '待审核', '已停用']
 const rebuildLoading = ref(false)
 const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const qaFormRef = ref()
+const importVisible = ref(false)
+const importRows = ref([])
+const importErrors = ref([])
+const importLoading = ref(false)
+const fileInputRef = ref()
 
-const qaRecords = ref(
-  qaList.map((item) => ({
-    ...item,
-    status: item.status === '已发布' ? '启用' : '停用'
-  }))
-)
+const qaRecords = ref([])
+
+const categoryOptions = computed(() => {
+  const names = [
+    ...categoryRecords.value.map((item) => item.name),
+    ...qaRecords.value.map((item) => item.category)
+  ]
+  return [...new Set(names.map((item) => String(item || '').trim()).filter(Boolean))]
+})
 
 const filters = reactive({
   keyword: '',
@@ -181,9 +257,9 @@ const createEmptyForm = () => ({
   keywords: [],
   viewCount: 0,
   askCount: 0,
-  status: '启用',
+  status: '已发布',
   source: '',
-  updatedAt: today
+  updatedAt: ''
 })
 
 const qaForm = reactive(createEmptyForm())
@@ -206,19 +282,19 @@ const stats = computed(() => [
   },
   {
     label: '启用问答',
-    value: qaRecords.value.filter((item) => item.status === '启用').length,
+    value: qaRecords.value.filter((item) => item.status === '已发布').length,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
   {
     label: '停用问答',
-    value: qaRecords.value.filter((item) => item.status === '停用').length,
+    value: qaRecords.value.filter((item) => item.status === '已停用').length,
     icon: 'CircleClose',
     color: 'linear-gradient(135deg, #7c8da5, #a5b5c6)'
   },
   {
     label: '今日更新',
-    value: qaRecords.value.filter((item) => item.updatedAt === today).length,
+    value: qaRecords.value.filter((item) => item.updatedAt === new Date().toISOString().slice(0, 10)).length,
     icon: 'Refresh',
     color: 'linear-gradient(135deg, #ffb020, #ffd36e)'
   }
@@ -248,6 +324,26 @@ const assignForm = (data) => {
   })
 }
 
+const statusTagType = (status) => {
+  if (status === '已发布') return 'success'
+  if (status === '待审核') return 'warning'
+  if (status === '草稿') return 'primary'
+  return 'info'
+}
+
+const fetchCategories = async () => {
+  const response = await getCategoryList()
+  categoryRecords.value = response.data || []
+}
+
+const fetchQaRecords = async () => {
+  const response = await getAdminQaList({
+    page: 1,
+    pageSize: 1000
+  })
+  qaRecords.value = response.data?.list || []
+}
+
 const openCreateDialog = () => {
   dialogMode.value = 'create'
   assignForm(createEmptyForm())
@@ -264,31 +360,30 @@ const submitQaForm = async () => {
   await qaFormRef.value.validate()
 
   const payload = {
-    ...qaForm,
+    question: qaForm.question,
+    answer: qaForm.answer,
+    category: qaForm.category,
     keywords: [...qaForm.keywords],
-    updatedAt: today
+    source: qaForm.source,
+    status: qaForm.status
   }
 
   if (dialogMode.value === 'create') {
-    qaRecords.value.unshift({
-      ...payload,
-      id: Math.max(...qaRecords.value.map((item) => item.id), 0) + 1
-    })
+    await createQa(payload)
     ElMessage.success('新增问答成功')
   } else {
-    const index = qaRecords.value.findIndex((item) => item.id === payload.id)
-    if (index !== -1) {
-      qaRecords.value[index] = payload
-    }
+    await updateQa(qaForm.id, payload)
     ElMessage.success('编辑问答成功')
   }
 
   dialogVisible.value = false
+  await fetchQaRecords()
 }
 
-const toggleStatus = (row) => {
-  row.status = row.status === '启用' ? '停用' : '启用'
-  row.updatedAt = today
+const toggleStatus = async (row) => {
+  const status = row.status === '已发布' ? '已停用' : '已发布'
+  await updateQa(row.id, { status })
+  row.status = status
   ElMessage.success(`已${row.status}该问答`)
 }
 
@@ -298,12 +393,187 @@ const handleDelete = async (row) => {
     confirmButtonText: '删除',
     cancelButtonText: '取消'
   })
-  qaRecords.value = qaRecords.value.filter((item) => item.id !== row.id)
+  await deleteQa(row.id)
+  await fetchQaRecords()
   ElMessage.success('删除成功')
 }
 
 const handleImport = () => {
-  ElMessage.info('已预留批量导入入口，当前演示使用 mock 数据。')
+  importVisible.value = true
+  importRows.value = []
+  importErrors.value = []
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
+const downloadImportTemplate = () => {
+  const rows = [
+    ['question', 'answer', 'category', 'keywords', 'source', 'status'],
+    [
+      '物业费电子发票在哪里开？',
+      '线上缴费完成后，可在社区小程序缴费记录中申请电子发票。',
+      '物业缴费',
+      '物业费，电子发票，票据',
+      '管理员导入',
+      '已发布'
+    ]
+  ]
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n')
+  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'qa_import_template.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const escapeCsvCell = (value) => {
+  const text = String(value ?? '')
+  return `"${text.replaceAll('"', '""')}"`
+}
+
+const triggerFileSelect = () => {
+  fileInputRef.value?.click()
+}
+
+const handleImportFile = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  await parseImportUpload(file)
+  event.target.value = ''
+}
+
+const handleImportDrop = async (event) => {
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+  await parseImportUpload(file)
+}
+
+const parseImportUpload = async (file) => {
+  const fileName = file.name.toLowerCase()
+  if (!fileName.endsWith('.csv')) {
+    ElMessage.warning('请上传 CSV 文件')
+    return
+  }
+
+  const content = await file.text()
+  const parsedRows = parseCsv(content)
+  const { rows, errors } = normalizeImportRows(parsedRows)
+  importRows.value = rows
+  importErrors.value = errors
+
+  if (!rows.length && !errors.length) {
+    importErrors.value = ['未读取到可导入数据']
+  }
+}
+
+const parseCsv = (content) => {
+  const text = content.replace(/^\ufeff/, '')
+  const rows = []
+  let row = []
+  let cell = ''
+  let inQuotes = false
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    const next = text[index + 1]
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"'
+      index += 1
+      continue
+    }
+
+    if (char === '"') {
+      inQuotes = !inQuotes
+      continue
+    }
+
+    if (char === ',' && !inQuotes) {
+      row.push(cell)
+      cell = ''
+      continue
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') index += 1
+      row.push(cell)
+      if (row.some((item) => item.trim())) rows.push(row)
+      row = []
+      cell = ''
+      continue
+    }
+
+    cell += char
+  }
+
+  row.push(cell)
+  if (row.some((item) => item.trim())) rows.push(row)
+  return rows
+}
+
+const normalizeImportRows = (csvRows) => {
+  const [header = [], ...body] = csvRows
+  const headerMap = header.map((item) => item.trim())
+  const requiredHeaders = ['question', 'answer', 'category', 'keywords', 'source', 'status']
+  const errors = []
+
+  requiredHeaders.forEach((name) => {
+    if (!headerMap.includes(name)) {
+      errors.push(`缺少模板字段 ${name}`)
+    }
+  })
+
+  if (errors.length) {
+    return { rows: [], errors }
+  }
+
+  const rows = []
+  body.forEach((line, index) => {
+    const record = Object.fromEntries(headerMap.map((name, columnIndex) => [name, (line[columnIndex] || '').trim()]))
+    const lineNumber = index + 2
+
+    if (!record.question || !record.answer || !record.category) {
+      errors.push(`第 ${lineNumber} 行缺少标准问题、标准答案或分类`)
+      return
+    }
+
+    rows.push({
+      question: record.question,
+      answer: record.answer,
+      category: record.category,
+      keywords: splitKeywords(record.keywords),
+      source: record.source || '批量导入',
+      status: record.status || '已发布'
+    })
+  })
+
+  return { rows, errors }
+}
+
+const splitKeywords = (value) => {
+  return String(value || '')
+    .split(/[，,;；]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const submitImportRows = async () => {
+  if (!importRows.value.length) return
+  importLoading.value = true
+  try {
+    for (const row of importRows.value) {
+      await createQa(row)
+    }
+    ElMessage.success(`成功导入 ${importRows.value.length} 条问答`)
+    importVisible.value = false
+    await fetchQaRecords()
+  } finally {
+    importLoading.value = false
+  }
 }
 
 const handleRebuildVector = async () => {
@@ -313,11 +583,18 @@ const handleRebuildVector = async () => {
     cancelButtonText: '取消'
   })
   rebuildLoading.value = true
-  setTimeout(() => {
+  try {
+    await rebuildVector()
     rebuildLoading.value = false
     ElMessage.success('向量库重建成功')
-  }, 2000)
+  } finally {
+    rebuildLoading.value = false
+  }
 }
+
+onMounted(async () => {
+  await Promise.all([fetchCategories(), fetchQaRecords()])
+})
 </script>
 
 <style scoped>
@@ -491,6 +768,70 @@ const handleRebuildVector = async () => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   gap: 16px;
+}
+
+.hidden-file {
+  display: none;
+}
+
+.import-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.import-note {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  color: #6b7c93;
+  font-size: 13px;
+}
+
+.import-alert {
+  margin-bottom: 14px;
+}
+
+.import-drop-zone {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 230px;
+  padding: 34px 18px;
+  border: 1px dashed #9ac4f8;
+  border-radius: 16px;
+  color: #4f6f90;
+  background: linear-gradient(135deg, rgba(17, 120, 255, 0.06), rgba(19, 190, 167, 0.08));
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.import-drop-zone:hover {
+  border-color: #1178ff;
+  color: #1178ff;
+  background: linear-gradient(135deg, rgba(17, 120, 255, 0.1), rgba(19, 190, 167, 0.12));
+}
+
+.import-drop-zone .el-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #1178ff, #13bea7);
+  font-size: 24px;
+}
+
+.import-drop-zone strong {
+  color: #172b4d;
+  font-size: 18px;
+}
+
+.import-drop-zone span {
+  font-size: 13px;
 }
 
 @media (max-width: 1180px) {

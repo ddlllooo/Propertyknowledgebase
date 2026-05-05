@@ -47,7 +47,9 @@
         end-placeholder="结束日期"
         value-format="YYYY-MM-DD"
       />
-      <el-button type="danger" plain @click="showUnmatchedOnly">仅查看未命中问题</el-button>
+      <el-button :type="filters.hitStatus === '未命中' ? 'primary' : 'danger'" plain @click="toggleUnmatchedOnly">
+        {{ filters.hitStatus === '未命中' ? '查看全部咨询' : '仅查看未命中问题' }}
+      </el-button>
     </section>
 
     <section class="table-card">
@@ -193,14 +195,17 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { categoryList, chatLogs, dashboardData, qaList } from '../../mock/mockData'
+import { getCategoryList } from '../../api/adminCategory'
+import { createQa, getAdminQaList } from '../../api/adminQa'
+import { getChatLogs } from '../../api/adminLog'
 
-const today = '2026-04-29'
-const categoryOptions = categoryList.map((item) => item.name)
-const logRecords = ref(chatLogs.map((item) => ({ ...item })))
+const today = new Date().toISOString().slice(0, 10)
+const categoryOptions = ref([])
+const logRecords = ref([])
+const qaRecords = ref([])
 const detailVisible = ref(false)
 const knowledgeVisible = ref(false)
 const activeLog = ref(null)
@@ -233,6 +238,7 @@ const knowledgeRules = {
 const unmatchedCount = computed(() => logRecords.value.filter((item) => item.hitStatus === '未命中').length)
 
 const averageResponseTime = computed(() => {
+  if (!logRecords.value.length) return '0.00s'
   const total = logRecords.value.reduce((sum, item) => sum + item.responseTime, 0)
   return `${(total / logRecords.value.length).toFixed(2)}s`
 })
@@ -246,7 +252,7 @@ const stats = computed(() => [
   },
   {
     label: '今日咨询量',
-    value: dashboardData.overview.todayConsultCount,
+    value: logRecords.value.filter((item) => item.createdAt?.slice(0, 10) === today).length,
     icon: 'Calendar',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
@@ -270,7 +276,7 @@ const stats = computed(() => [
   }
 ])
 
-const keywordOptions = computed(() => [...new Set(qaList.flatMap((item) => item.keywords))])
+const keywordOptions = computed(() => [...new Set(qaRecords.value.flatMap((item) => item.keywords || []))])
 
 const filteredLogs = computed(() => {
   const keyword = filters.keyword.trim().toLowerCase()
@@ -288,8 +294,8 @@ const filteredLogs = computed(() => {
   })
 })
 
-const showUnmatchedOnly = () => {
-  filters.hitStatus = '未命中'
+const toggleUnmatchedOnly = () => {
+  filters.hitStatus = filters.hitStatus === '未命中' ? '全部' : '未命中'
 }
 
 const openDetail = (row) => {
@@ -312,6 +318,14 @@ const openKnowledgeDialog = (row) => {
 
 const saveToKnowledgeBase = async () => {
   await knowledgeFormRef.value.validate()
+  await createQa({
+    question: knowledgeForm.question,
+    answer: knowledgeForm.answer,
+    category: knowledgeForm.category,
+    keywords: knowledgeForm.keywords,
+    source: knowledgeForm.source,
+    status: '已发布'
+  })
   if (activeLog.value) {
     activeLog.value.hitStatus = '已命中'
     activeLog.value.needHuman = false
@@ -321,6 +335,19 @@ const saveToKnowledgeBase = async () => {
   detailVisible.value = false
   ElMessage.success('已加入知识库，后续可用于优化 RAG 命中效果')
 }
+
+const fetchData = async () => {
+  const [categoryResponse, logResponse, qaResponse] = await Promise.all([
+    getCategoryList(),
+    getChatLogs({ page: 1, pageSize: 300 }),
+    getAdminQaList({ page: 1, pageSize: 200 })
+  ])
+  categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
+  logRecords.value = logResponse.data?.list || []
+  qaRecords.value = qaResponse.data?.list || []
+}
+
+onMounted(fetchData)
 </script>
 
 <style scoped>

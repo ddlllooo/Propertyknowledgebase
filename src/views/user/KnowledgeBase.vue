@@ -82,18 +82,42 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, DocumentCopy, Search, View } from '@element-plus/icons-vue'
-import { categoryList, qaList } from '../../mock/mockData'
+import { getCategories, getQaDetail, getQaList } from '../../api/qa'
+import { createFeedback } from '../../api/feedback'
 
 const keyword = ref('')
 const activeCategory = ref('全部')
 const drawerVisible = ref(false)
 const selectedQuestion = ref(null)
-const categoryOptions = ['全部', ...categoryList.map((item) => item.name)]
+const qaRecords = ref([])
+const categories = ref([])
+const loading = ref(false)
+const categoryOptions = computed(() => ['全部', ...categories.value.map((item) => item.name)])
 
-onMounted(() => {
+const fetchCategories = async () => {
+  const response = await getCategories()
+  categories.value = response.data || []
+}
+
+const fetchQaList = async () => {
+  loading.value = true
+  try {
+    const response = await getQaList({
+      keyword: keyword.value.trim() || undefined,
+      category: activeCategory.value === '全部' ? undefined : activeCategory.value,
+      page: 1,
+      pageSize: 100
+    })
+    qaRecords.value = response.data?.list || []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
   const savedKeyword = sessionStorage.getItem('knowledgeKeyword')
   const savedCategory = sessionStorage.getItem('knowledgeCategory')
   if (savedKeyword) {
@@ -104,20 +128,20 @@ onMounted(() => {
     activeCategory.value = savedCategory
     sessionStorage.removeItem('knowledgeCategory')
   }
+  await Promise.all([fetchCategories(), fetchQaList()])
 })
 
-const filteredList = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLowerCase()
-  return qaList.filter((item) => {
-    const categoryMatched = activeCategory.value === '全部' || item.category === activeCategory.value
-    const text = [item.question, item.answer, item.category, ...item.keywords].join(' ').toLowerCase()
-    const keywordMatched = !normalizedKeyword || text.includes(normalizedKeyword)
-    return categoryMatched && keywordMatched
-  })
+let searchTimer
+watch([keyword, activeCategory], () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(fetchQaList, 250)
 })
 
-const openDetail = (item) => {
-  selectedQuestion.value = item
+const filteredList = computed(() => qaRecords.value)
+
+const openDetail = async (item) => {
+  const response = await getQaDetail(item.id)
+  selectedQuestion.value = response.data
   drawerVisible.value = true
 }
 
@@ -127,7 +151,13 @@ const copyAnswer = async () => {
   ElMessage.success('复制成功')
 }
 
-const sendHelpful = (type) => {
+const sendHelpful = async (type) => {
+  if (!selectedQuestion.value) return
+  await createFeedback({
+    qaId: selectedQuestion.value.id,
+    feedbackType: type,
+    suggestion: type === '有帮助' ? '回答比较清楚' : '希望进一步完善答案'
+  })
   ElMessage.success(`已提交“${type}”反馈`)
 }
 </script>

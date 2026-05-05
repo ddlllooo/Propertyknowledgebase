@@ -50,12 +50,13 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { EditPen } from '@element-plus/icons-vue'
-import { feedbackList } from '../../mock/mockData'
+import { getMyFeedback } from '../../api/feedback'
 
 const currentStatus = ref('全部')
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
+const feedbackList = ref([])
 
 const statusTypeMap = {
   待处理: 'warning',
@@ -65,8 +66,13 @@ const statusTypeMap = {
 }
 
 const filteredFeedback = computed(() => {
-  if (currentStatus.value === '全部') return feedbackList
-  return feedbackList.filter((item) => item.status === currentStatus.value)
+  if (currentStatus.value === '全部') return feedbackList.value
+  return feedbackList.value.filter((item) => item.status === currentStatus.value)
+})
+
+onMounted(async () => {
+  const response = await getMyFeedback()
+  feedbackList.value = response.data || []
 })
 </script>
 

@@ -82,7 +82,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Connection, Lock, Message, User } from '@element-plus/icons-vue'
-import request, { mockApi } from '../utils/request'
+import { login, register } from '../api/auth'
 
 const router = useRouter()
 const loginFormRef = ref()
@@ -154,11 +154,11 @@ const features = [
 const getErrorMessage = (error, fallback = '操作失败') => {
   const data = error?.response?.data
   if (typeof data === 'string') return data
-  return data?.message || data?.error || data?.msg || error?.message || fallback
+  return data?.message || error?.message || fallback
 }
 
 const normalizeLoginResult = (response) => {
-  const data = response?.data || response
+  const data = response?.data || {}
   const user = data?.user || {}
 
   return {
@@ -172,23 +172,15 @@ const handleLogin = async () => {
   await loginFormRef.value.validate()
   loading.value = true
   try {
-    let userInfo
-    try {
-      const response = await request.post('/auth/login', {
-        username: form.username,
-        password: form.password
-      })
-      userInfo = normalizeLoginResult(response)
-    } catch (error) {
-      if (error.response) {
-        throw error
-      }
-      userInfo = await mockApi.login(form)
-    }
+    const response = await login({
+      username: form.username,
+      password: form.password
+    })
+    const userInfo = normalizeLoginResult(response)
 
-    localStorage.setItem('token', userInfo.token)
-    localStorage.setItem('role', userInfo.role)
-    localStorage.setItem('username', userInfo.username)
+    sessionStorage.setItem('token', userInfo.token)
+    sessionStorage.setItem('role', userInfo.role)
+    sessionStorage.setItem('username', userInfo.username)
     ElMessage.success('登录成功')
     router.push(userInfo.role === 'admin' ? '/admin/home' : '/user/home')
   } catch (error) {
@@ -215,7 +207,7 @@ const handleRegister = async () => {
   await registerFormRef.value.validate()
   registerLoading.value = true
   try {
-    await request.post('/auth/register', {
+    await register({
       email: registerForm.email,
       password: registerForm.password,
       confirmPassword: registerForm.confirmPassword

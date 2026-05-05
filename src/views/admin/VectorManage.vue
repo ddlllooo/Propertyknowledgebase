@@ -56,68 +56,33 @@
       </div>
     </section>
 
-    <section class="bottom-grid">
-      <article class="rebuild-card">
-        <div class="section-head">
-          <div>
-            <h2>手动重建</h2>
-            <span>知识库新增或修改后，可手动更新检索索引</span>
-          </div>
-        </div>
-        <div class="rebuild-visual">
-          <div class="pulse-ring">
-            <el-icon><Connection /></el-icon>
-          </div>
-          <div>
-            <strong>{{ rebuildLoading ? '正在重建向量库' : '向量库状态正常' }}</strong>
-            <p>{{ rebuildLoading ? '正在执行文本切分、Embedding 和 FAISS 写入。' : '当前 RAG 检索服务可正常调用。' }}</p>
-          </div>
-        </div>
-        <el-button type="primary" :icon="Refresh" :loading="rebuildLoading" @click="handleRebuild">
-          重建向量库
-        </el-button>
-      </article>
-
-      <article class="notice-card">
-        <div class="section-head">
-          <div>
-            <h2>注意事项</h2>
-            <span>演示环境与后续扩展方向</span>
-          </div>
-        </div>
-        <ul>
-          <li v-for="item in notices" :key="item">
-            <el-icon><CircleCheck /></el-icon>
-            <span>{{ item }}</span>
-          </li>
-        </ul>
-      </article>
-    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { CircleCheck, Connection, Refresh } from '@element-plus/icons-vue'
-import { vectorStatus } from '../../mock/mockData'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElLoading, ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
+import { getVectorStatus, rebuildVector } from '../../api/vector'
 
 const rebuildLoading = ref(false)
 
 const vectorInfo = reactive({
-  ...vectorStatus,
-  status: '正常',
-  knowledgeCount: 60,
-  lastBuildTime: '2026-04-29 10:30:00',
-  vectorStore: 'FAISS',
-  embeddingModel: 'bge-small-zh',
+  status: '运行中',
+  knowledgeCount: 0,
+  lastBuildTime: '',
+  vectorStore: 'Property-QA-VectorStore',
+  embeddingModel: 'text-embedding-3-small',
   ragStatus: {
-    ...vectorStatus.ragStatus,
-    serviceStatus: '运行中'
+    indexStatus: '已同步',
+    chunkCount: 0,
+    avgSimilarity: 0.82,
+    lastSyncResult: '成功',
+    pendingSyncCount: 0
   }
 })
 
-const ragStatus = computed(() => vectorInfo.ragStatus.serviceStatus || '运行中')
+const ragStatus = computed(() => vectorInfo.ragStatus.indexStatus || vectorInfo.status || '运行中')
 
 const statusCards = computed(() => [
   {
@@ -166,19 +131,19 @@ const buildSteps = [
   { title: 'RAG 检索调用', desc: '为智能问答提供召回能力' }
 ]
 
-const notices = [
-  '新增或修改知识库后建议重建向量库',
-  '重建期间智能问答可能短暂不可用',
-  '当前演示阶段使用模拟数据',
-  '后续可接入 LangChain + FAISS 实现真实向量库更新'
-]
+const assignVectorInfo = (data) => {
+  Object.assign(vectorInfo, {
+    ...data,
+    ragStatus: {
+      ...vectorInfo.ragStatus,
+      ...(data.ragStatus || {})
+    }
+  })
+}
 
-const formatNow = () => {
-  const date = new Date()
-  const pad = (value) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}:${pad(date.getSeconds())}`
+const loadVectorStatus = async () => {
+  const response = await getVectorStatus()
+  assignVectorInfo(response.data)
 }
 
 const handleRebuild = async () => {
@@ -189,15 +154,29 @@ const handleRebuild = async () => {
   })
 
   rebuildLoading.value = true
-  setTimeout(() => {
-    vectorInfo.lastBuildTime = formatNow()
-    vectorInfo.status = '正常'
-    vectorInfo.ragStatus.lastSyncResult = '成功'
-    vectorInfo.ragStatus.pendingSyncCount = 0
-    rebuildLoading.value = false
+  vectorInfo.status = '重建中'
+  vectorInfo.ragStatus.indexStatus = '重建中'
+  vectorInfo.ragStatus.lastSyncResult = '执行中'
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在重建向量库，首次下载 Embedding 模型可能需要较长时间，请勿关闭页面...',
+    background: 'rgba(255, 255, 255, 0.78)'
+  })
+
+  try {
+    await rebuildVector()
+    await loadVectorStatus()
     ElMessage.success('向量库重建成功')
-  }, 2000)
+  } catch (error) {
+    await loadVectorStatus()
+  } finally {
+    loadingInstance.close()
+    rebuildLoading.value = false
+  }
 }
+
+onMounted(loadVectorStatus)
 </script>
 
 <style scoped>
@@ -254,9 +233,7 @@ const handleRebuild = async () => {
 }
 
 .status-card,
-.flow-card,
-.rebuild-card,
-.notice-card {
+.flow-card {
   border: 1px solid rgba(211, 226, 238, 0.86);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 14px 34px rgba(21, 56, 98, 0.08);
@@ -296,9 +273,7 @@ const handleRebuild = async () => {
   line-height: 1.35;
 }
 
-.flow-card,
-.rebuild-card,
-.notice-card {
+.flow-card {
   padding: 26px;
   border-radius: 22px;
 }
@@ -362,76 +337,9 @@ const handleRebuild = async () => {
   font-size: 24px;
 }
 
-.bottom-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
-  gap: 18px;
-}
-
-.rebuild-visual {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  min-height: 150px;
-  padding: 20px;
-  border-radius: 20px;
-  background: linear-gradient(120deg, #eef7ff, #ecfbf8);
-}
-
-.pulse-ring {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  color: #fff;
-  background: linear-gradient(135deg, #1178ff, #13bea7);
-  box-shadow: 0 0 0 14px rgba(17, 120, 255, 0.1);
-  font-size: 34px;
-}
-
-.rebuild-visual strong {
-  color: #172b4d;
-  font-size: 22px;
-}
-
-.rebuild-visual p {
-  margin: 8px 0 0;
-  color: #5d7188;
-  line-height: 1.75;
-}
-
-.rebuild-card > .el-button {
-  margin-top: 18px;
-}
-
-.notice-card ul {
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.notice-card li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 14px;
-  color: #465f78;
-  background: #f6faff;
-}
-
-.notice-card li .el-icon {
-  color: #13bea7;
-}
-
 @media (max-width: 1020px) {
   .status-grid,
-  .tech-strip,
-  .bottom-grid {
+  .tech-strip {
     grid-template-columns: 1fr;
   }
 }

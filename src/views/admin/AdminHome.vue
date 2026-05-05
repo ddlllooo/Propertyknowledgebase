@@ -101,50 +101,70 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { categoryList, chatLogs, dashboardData, feedbackList, qaList, vectorStatus } from '../../mock/mockData'
+import { getCategoryList } from '../../api/adminCategory'
+import { getFeedbackList } from '../../api/adminFeedback'
+import { getChatLogs } from '../../api/adminLog'
+import { getDailyTrend, getOverview, getUnmatched } from '../../api/dashboard'
+import { getVectorStatus } from '../../api/vector'
 
 const router = useRouter()
 const trendChartRef = ref()
 let trendChart = null
+const overview = reactive({
+  knowledgeCount: 0,
+  todayConsultCount: 0,
+  pendingFeedback: 0,
+  needHumanCount: 0,
+  helpfulRate: 0
+})
+const dailyTrend = ref([])
+const unmatchedQuestions = ref([])
+const categories = ref([])
+const recentFeedbackRecords = ref([])
+const recentLogRecords = ref([])
+const vectorStatus = reactive({
+  status: '运行中',
+  lastBuildTime: ''
+})
 
 const metrics = computed(() => [
   {
     label: '知识库总数',
-    value: dashboardData.overview.knowledgeCount || qaList.length,
+    value: overview.knowledgeCount,
     icon: 'Collection',
     color: 'linear-gradient(135deg, #1178ff, #56a9ff)'
   },
   {
     label: '今日咨询量',
-    value: dashboardData.overview.todayConsultCount,
+    value: overview.todayConsultCount,
     icon: 'ChatLineRound',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
   {
     label: '待处理反馈',
-    value: 6,
+    value: overview.pendingFeedback,
     icon: 'MessageBox',
     color: 'linear-gradient(135deg, #ffb020, #ffd36e)'
   },
   {
     label: '未命中问题',
-    value: dashboardData.overview.needHumanCount ? 4 : dashboardData.unmatchedQuestions.length,
+    value: overview.needHumanCount || unmatchedQuestions.value.length,
     icon: 'Warning',
     color: 'linear-gradient(135deg, #ff6b6b, #ff9b8a)'
   },
   {
     label: '答案有帮助率',
-    value: `${dashboardData.overview.helpfulRate}%`,
+    value: `${overview.helpfulRate}%`,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
   },
   {
     label: '启用分类',
-    value: categoryList.filter((item) => item.status === '启用').length,
+    value: categories.value.filter((item) => item.status === '启用').length,
     icon: 'Grid',
     color: 'linear-gradient(135deg, #20b486, #74d3b4)'
   }
@@ -177,8 +197,8 @@ const quickActions = [
   }
 ]
 
-const recentFeedback = computed(() => feedbackList.slice(0, 5))
-const recentLogs = computed(() => chatLogs.slice(0, 5))
+const recentFeedback = computed(() => recentFeedbackRecords.value.slice(0, 5))
+const recentLogs = computed(() => recentLogRecords.value.slice(0, 5))
 
 const statusTypeMap = {
   待处理: 'warning',
@@ -216,7 +236,7 @@ const renderTrendChart = async () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: dashboardData.dailyTrend.map((item) => item.date),
+      data: dailyTrend.value.map((item) => item.date),
       axisTick: { show: false },
       axisLine: { lineStyle: { color: '#d9e6f0' } },
       axisLabel: { color: '#6b7c93' }
@@ -231,7 +251,7 @@ const renderTrendChart = async () => {
         name: '咨询量',
         type: 'line',
         smooth: true,
-        data: dashboardData.dailyTrend.map((item) => item.consultCount),
+        data: dailyTrend.value.map((item) => item.consultCount),
         symbolSize: 8,
         lineStyle: {
           width: 4,
@@ -257,8 +277,30 @@ const resizeChart = () => {
   trendChart?.resize()
 }
 
-onMounted(() => {
-  renderTrendChart()
+const loadAdminHome = async () => {
+  const [overviewResponse, trendResponse, unmatchedResponse, categoryResponse, feedbackResponse, logResponse, vectorResponse] =
+    await Promise.all([
+      getOverview(),
+      getDailyTrend(),
+      getUnmatched(),
+      getCategoryList(),
+      getFeedbackList({ page: 1, pageSize: 5 }),
+      getChatLogs({ page: 1, pageSize: 5 }),
+      getVectorStatus()
+    ])
+
+  Object.assign(overview, overviewResponse.data || {})
+  dailyTrend.value = trendResponse.data || []
+  unmatchedQuestions.value = unmatchedResponse.data || []
+  categories.value = categoryResponse.data || []
+  recentFeedbackRecords.value = feedbackResponse.data?.list || []
+  recentLogRecords.value = logResponse.data?.list || []
+  Object.assign(vectorStatus, vectorResponse.data || {})
+}
+
+onMounted(async () => {
+  await loadAdminHome()
+  await renderTrendChart()
   window.addEventListener('resize', resizeChart)
 })
 

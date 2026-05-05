@@ -58,7 +58,7 @@ import { ArrowDown, HomeFilled, SwitchButton } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
-const username = localStorage.getItem('username') || 'user'
+const username = sessionStorage.getItem('username') || 'user'
 
 const menus = [
   { label: '用户首页', path: '/user/home', icon: 'DataAnalysis' },
@@ -77,7 +77,7 @@ const handleCommand = async (command) => {
     confirmButtonText: '退出',
     cancelButtonText: '取消'
   })
-  localStorage.clear()
+  sessionStorage.clear()
   router.push('/login')
 }
 </script>

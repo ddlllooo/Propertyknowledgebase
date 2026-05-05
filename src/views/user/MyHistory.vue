@@ -48,15 +48,18 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import { categoryList, chatHistory } from '../../mock/mockData'
+import { getMyHistory } from '../../api/chat'
+import { getCategories } from '../../api/qa'
 
 const keyword = ref('')
 const category = ref('全部')
 const hitStatus = ref('all')
+const chatHistory = ref([])
+const categoryList = ref([])
 
-const categories = ['全部', ...categoryList.map((item) => item.name)]
+const categories = computed(() => ['全部', ...categoryList.value.map((item) => item.name)])
 const hitOptions = [
   { label: '全部状态', value: 'all' },
   { label: '已命中', value: 'hit' },
@@ -65,7 +68,7 @@ const hitOptions = [
 
 const filteredHistory = computed(() => {
   const normalizedKeyword = keyword.value.trim().toLowerCase()
-  return chatHistory.filter((item) => {
+  return chatHistory.value.filter((item) => {
     const keywordMatched =
       !normalizedKeyword || `${item.question} ${item.answer}`.toLowerCase().includes(normalizedKeyword)
     const categoryMatched = category.value === '全部' || item.category === category.value
@@ -76,6 +79,14 @@ const filteredHistory = computed(() => {
     return keywordMatched && categoryMatched && hitMatched
   })
 })
+
+const fetchData = async () => {
+  const [historyResponse, categoryResponse] = await Promise.all([getMyHistory(), getCategories()])
+  chatHistory.value = historyResponse.data || []
+  categoryList.value = categoryResponse.data || []
+}
+
+onMounted(fetchData)
 </script>
 
 <style scoped>
