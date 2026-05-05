@@ -47,6 +47,7 @@ def get_vector_status():
     knowledge_count = QaKnowledge.query.filter_by(status="已发布").count()
     exists = faiss_index_exists()
     chunk_count = get_index_doc_count() if exists else 0
+    pending_sync_count = max(knowledge_count - chunk_count, 0)
 
     return {
         "status": "运行中" if exists else "未构建",
@@ -56,11 +57,11 @@ def get_vector_status():
         "embeddingModel": EMBEDDING_MODEL_NAME,
         "llmStatus": get_deepseek_health(),
         "ragStatus": {
-            "indexStatus": "已同步" if exists else "未构建",
+            "indexStatus": "已同步" if exists and pending_sync_count == 0 else "待同步",
             "chunkCount": chunk_count,
             "avgSimilarity": 0.82,
             "lastSyncResult": LAST_SYNC_RESULT,
-            "pendingSyncCount": 0 if exists else knowledge_count,
+            "pendingSyncCount": pending_sync_count,
         },
     }
 

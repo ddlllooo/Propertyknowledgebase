@@ -63,7 +63,7 @@ def build_miss_result(user, question, started_at, distance=None, reason="未检�
         "needHuman": True,
         "chatLogId": chat_log.id,
         "llmUsed": False,
-        "answerSource": "后端 RAG",
+        "answerSource": "知识库",
         "generationMode": "未命中",
         "ragTrace": reason,
     }
@@ -143,7 +143,7 @@ def rag_answer(question, current_user):
         "needHuman": False,
         "chatLogId": chat_log.id,
         "llmUsed": llm_used,
-        "answerSource": "后端 RAG",
+        "answerSource": "智能客服",
         "generationMode": generation_mode,
         "ragTrace": "DeepSeek 调用成功" if llm_used else llm_error,
     }

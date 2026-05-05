@@ -31,13 +31,7 @@
 
 系统后端使用 `BAAI/bge-small-zh-v1.5` 作为中文 embedding 模型，将已发布知识转为向量并写入本地 FAISS 索引。用户提问时，系统先检索最相近的知识片段，再构造提示词调用 DeepSeek；如果检索分数低于阈值或模型调用失败，会回退到知识库标准答案或未命中提示。
 
-为避免用户第一次登录后首次提问时因 Hugging Face 模型下载或加载导致超时，后端已将模型缓存固定到本地目录：
-
-```text
-property_kb_backend/storage/hf_cache/
-```
-
-该目录已加入 `.gitignore`，不会提交到仓库。第一次启动后端时如果本地没有模型缓存，仍需要下载一次；后续启动会复用本地缓存。
+为避免用户第一次登录后首次提问时因 Hugging Face 模型下载或加载导致超时，后端已将模型缓存固定到本地目录。
 
 ## 技术栈
 
@@ -68,37 +62,7 @@ property_kb_backend/storage/hf_cache/
 
 - MySQL：保存用户、分类、问答、咨询日志和反馈数据。
 - FAISS 本地索引：默认保存到 `property_kb_backend/storage/faiss_index/`。
-- Hugging Face 模型缓存：默认保存到 `property_kb_backend/storage/hf_cache/`。
-
-## 目录结构
-
-```text
-Propertyknowledgebase/
-├── index.html
-├── package.json
-├── vite.config.js
-├── src/
-│   ├── api/                 # 前端接口封装
-│   ├── layouts/             # 用户端和管理端布局
-│   ├── mock/                # 前端静态演示数据
-│   ├── router/              # 路由和权限守卫
-│   ├── styles/              # 全局样式
-│   ├── utils/               # Axios 请求封装
-│   └── views/               # 页面组件
-└── property_kb_backend/
-    ├── app.py               # Flask 应用入口
-    ├── config.py            # Flask 基础配置
-    ├── init_db.py           # 初始化数据库表
-    ├── seed_data.py         # 初始化演示账号、分类和问答数据
-    ├── requirements.txt     # 后端依赖
-    ├── extensions/          # Flask 扩展
-    ├── models/              # SQLAlchemy 模型
-    ├── rag/                 # RAG、Embedding、FAISS、LLM 调用
-    ├── routes/              # API 路由
-    ├── services/            # 统计和业务服务
-    ├── storage/             # 本地向量索引和模型缓存，已忽略生成文件
-    └── utils/               # 鉴权和响应工具
-```
+- Hugging Face Embedding 模型缓存：默认保存到 `property_kb_backend/storage/hf_cache/`。
 
 ## 环境要求
 
@@ -175,7 +139,7 @@ RAG_PRELOAD_EMBEDDINGS=true
 默认数据库连接在 `property_kb_backend/config.py` 中：
 
 ```python
-mysql+pymysql://root:123456@localhost:3306/property_kb?charset=utf8mb4
+mysql+pymysql://your mysqlname:password@localhost:port(3306)/property_kb?charset=utf8mb4
 ```
 
 请先在 MySQL 中创建数据库：
@@ -765,59 +729,6 @@ question,answer,category,keywords,source,status
 - 如果用户反馈“新知识没有生效”，先检查问答是否为“已发布”，再检查是否已重建向量库。
 - 如果首次问答慢，检查 Hugging Face 模型缓存是否已经下载完成。
 
-## 后端 API 概览
-
-默认后端地址：
-
-```text
-http://localhost:5000/api
-```
-
-### 认证
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| POST | `/auth/register` | 注册普通用户 |
-| POST | `/auth/login` | 登录并获取 JWT |
-| GET | `/auth/profile` | 获取当前用户信息 |
-
-### 用户端
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/qa` | 查询在线知识库列表 |
-| GET | `/qa/categories` | 查询启用分类 |
-| GET | `/qa/<id>` | 查询知识详情 |
-| POST | `/chat` | 智能问答 |
-| GET | `/chat/my-history` | 我的咨询记录 |
-| POST | `/feedback` | 提交反馈 |
-| GET | `/feedback/my` | 我的反馈 |
-
-### 管理端
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/admin/qa` | 查询管理端问答 |
-| POST | `/admin/qa` | 新增问答 |
-| PUT | `/admin/qa/<id>` | 编辑问答 |
-| DELETE | `/admin/qa/<id>` | 删除问答 |
-| GET | `/admin/category` | 查询分类 |
-| POST | `/admin/category` | 新增分类 |
-| PUT | `/admin/category/<id>` | 编辑分类 |
-| DELETE | `/admin/category/<id>` | 删除分类 |
-| GET | `/admin/feedback` | 查询反馈 |
-| PUT | `/admin/feedback/<id>/status` | 更新反馈状态 |
-| POST | `/admin/feedback/<id>/to-knowledge` | 反馈补充到知识库 |
-| GET | `/admin/chat-logs` | 查询咨询日志 |
-| GET | `/admin/dashboard` | 查询数据看板 |
-| GET | `/admin/vector/status` | 查询向量库状态 |
-| POST | `/admin/vector/rebuild` | 重建向量库 |
-
-需要登录的接口会校验 JWT。前端会自动在请求头中携带：
-
-```text
-Authorization: Bearer <token>
-```
 
 ## 常见问题
 
@@ -883,25 +794,6 @@ DEEPSEEK_API_KEY=你的 DeepSeek API Key
 3. 管理员访问 `/admin/*` 页面。
 4. 如仍异常，清空浏览器站点数据后重试。
 
-### 6. Git 不应提交哪些文件？
-
-以下文件或目录不应提交：
-
-```text
-node_modules/
-dist/
-.env
-.env.*
-property_kb_backend/.venv/
-property_kb_backend/storage/hf_cache/
-property_kb_backend/storage/faiss_index/
-property_kb_backend/tmp*/
-__pycache__/
-*.py[cod]
-```
-
-这些内容已经写入 `.gitignore`。
-
 ## 日常维护流程
 
 ### 每日运营建议
@@ -931,34 +823,6 @@ __pycache__/
 5. 检查 `.env` 中 DeepSeek 和 RAG 配置。
 6. 检查向量库是否已构建。
 
-## 开发命令速查
-
-项目根目录：
-
-```bash
-npm install
-npm run dev
-npm run build
-npm run preview
-```
-
-后端目录：
-
-```bash
-cd property_kb_backend
-python -m venv .venv
-pip install -r requirements.txt
-python init_db.py
-python seed_data.py
-python app.py
-```
-
-后端语法检查：
-
-```bash
-python -m compileall -q -x ".*(\\.venv|tmp|storage).*" property_kb_backend
-```
-
 Git 提交流程：
 
 ```bash
@@ -970,4 +834,4 @@ git push origin main
 
 ## 版本说明
 
-当前项目已经包含完整前端页面、Flask 后端 API、MySQL 数据模型、RAG 检索服务、DeepSeek 调用、FAISS 向量库维护和 Hugging Face 本地缓存配置。后续可继续补充自动化测试、部署脚本、Docker Compose、生产环境 Nginx 配置和更细粒度的权限管理。
+当前项目已经包含完整前端页面、Flask 后端 API、MySQL 数据模型、RAG 检索服务、DeepSeek 调用、FAISS 向量库维护和 Hugging Face 本地缓存配置。

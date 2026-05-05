@@ -100,11 +100,13 @@
 </template>
 
 <script setup>
-import { nextTick, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Promotion } from '@element-plus/icons-vue'
 import { sendQuestion } from '../../api/chat'
 import { createFeedback } from '../../api/feedback'
+
+const CHAT_SESSION_KEY = 'userChatAgentMessages'
 
 const messageBoxRef = ref()
 const inputValue = ref('')
@@ -116,14 +118,16 @@ const feedbackForm = reactive({
   content: ''
 })
 
-const messages = ref([
+const defaultMessages = () => [
   {
     id: Date.now(),
     role: 'ai',
     content: '您好，我是智慧物业助手。您可以直接问我物业缴费、报修、停车、装修等问题。',
     canFeedback: false
   }
-])
+]
+
+const messages = ref(defaultMessages())
 
 const recommendedQuestions = [
   '物业费可以通过哪些方式缴纳？',
@@ -138,6 +142,28 @@ const scrollToBottom = async () => {
     messageBoxRef.value.scrollTop = messageBoxRef.value.scrollHeight
   }
 }
+
+const loadCachedMessages = () => {
+  const cached = sessionStorage.getItem(CHAT_SESSION_KEY)
+  if (!cached) return
+
+  try {
+    const parsedMessages = JSON.parse(cached)
+    if (Array.isArray(parsedMessages) && parsedMessages.length) {
+      messages.value = parsedMessages
+    }
+  } catch {
+    sessionStorage.removeItem(CHAT_SESSION_KEY)
+  }
+}
+
+watch(
+  messages,
+  (value) => {
+    sessionStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(value))
+  },
+  { deep: true }
+)
 
 const sendMessage = async (presetQuestion) => {
   const question = (presetQuestion || inputValue.value).trim()
@@ -166,7 +192,7 @@ const sendMessage = async (presetQuestion) => {
       canFeedback: Boolean(answer.chatLogId),
       meta: {
         category: answer.category,
-        answerSource: answer.answerSource || '后端 RAG',
+        answerSource: answer.answerSource || '知识库',
         reference: answer.matchedQuestion || '暂无明确参考问题',
         similarity: `${Math.round(answer.similarity * 100)}%`
       }
@@ -207,6 +233,11 @@ const submitFeedback = async () => {
   feedbackVisible.value = false
   ElMessage.success('反馈已提交')
 }
+
+onMounted(async () => {
+  loadCachedMessages()
+  await scrollToBottom()
+})
 </script>
 
 <style scoped>

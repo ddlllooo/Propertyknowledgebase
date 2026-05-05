@@ -96,7 +96,25 @@ def home_summary():
     start = datetime.combine(today, time.min)
     end = start + timedelta(days=1)
 
-    category_records = (
+    consult_category_records = (
+        ChatLog.query.with_entities(
+            ChatLog.category.label("name"),
+            func.count(ChatLog.id).label("count"),
+        )
+        .filter(ChatLog.category != "")
+        .group_by(ChatLog.category)
+        .order_by(func.count(ChatLog.id).desc(), ChatLog.category.asc())
+        .all()
+    )
+    consult_categories = [
+        {
+            "name": name or "未分类",
+            "count": count,
+        }
+        for name, count in consult_category_records
+    ]
+
+    knowledge_category_records = (
         QaKnowledge.query.with_entities(
             QaKnowledge.category.label("name"),
             func.count(QaKnowledge.id).label("count"),
@@ -106,15 +124,34 @@ def home_summary():
         .order_by(func.count(QaKnowledge.id).desc(), QaKnowledge.category.asc())
         .all()
     )
-    categories = [
+    knowledge_categories = [
         {
             "name": name or "未分类",
             "count": count,
         }
-        for name, count in category_records
+        for name, count in knowledge_category_records
+    ]
+
+    hot_question_records = (
+        ChatLog.query.with_entities(
+            ChatLog.question.label("question"),
+            func.count(ChatLog.id).label("count"),
+        )
+        .group_by(ChatLog.question)
+        .order_by(func.count(ChatLog.id).desc(), func.max(ChatLog.created_at).desc())
+        .limit(6)
+        .all()
+    )
+    hot_questions = [
+        {
+            "question": question,
+            "count": count,
+        }
+        for question, count in hot_question_records
     ]
 
     helpful_summary = get_helpful_rate_summary()
+    top_category = consult_categories[0]["name"] if consult_categories else "暂无"
 
     return success(
         {
@@ -125,8 +162,10 @@ def home_summary():
                 ChatLog.created_at >= start,
                 ChatLog.created_at < end,
             ).count(),
-            "topCategory": categories[0]["name"] if categories else "暂无",
-            "categories": categories,
+            "topCategory": top_category,
+            "categories": knowledge_categories,
+            "consultCategories": consult_categories,
+            "hotQuestions": hot_questions,
             "hitQuestionCount": helpful_summary["hitQuestionCount"],
             "missedQuestionCount": helpful_summary["missedQuestionCount"],
             "helpfulRate": helpful_summary["helpfulRate"],

@@ -99,6 +99,8 @@ const homeSummary = ref({
   todayConsultCount: 0,
   topCategory: '暂无',
   categories: [],
+  consultCategories: [],
+  hotQuestions: [],
   helpfulRate: 0,
   helpfulRateText: '暂无数据'
 })
@@ -139,7 +141,9 @@ const entries = [
 const tagTypes = ['primary', 'success', 'warning', 'info', 'success', 'danger']
 
 const hotQuestions = computed(() =>
-  [...qaRecords.value].sort((a, b) => b.askCount - a.askCount).slice(0, 6).map((item) => item.question)
+  homeSummary.value.hotQuestions.length
+    ? homeSummary.value.hotQuestions.map((item) => item.question)
+    : [...qaRecords.value].sort((a, b) => b.askCount - a.askCount).slice(0, 6).map((item) => item.question)
 )
 
 const quickCategories = computed(() =>
