@@ -823,15 +823,6 @@ DEEPSEEK_API_KEY=你的 DeepSeek API Key
 5. 检查 `.env` 中 DeepSeek 和 RAG 配置。
 6. 检查向量库是否已构建。
 
-Git 提交流程：
-
-```bash
-git status
-git add .
-git commit -m "docs: add knowledge base operation manual"
-git push origin main
-```
-
 ## 版本说明
 
 当前项目已经包含完整前端页面、Flask 后端 API、MySQL 数据模型、RAG 检索服务、DeepSeek 调用、FAISS 向量库维护和 Hugging Face 本地缓存配置。
