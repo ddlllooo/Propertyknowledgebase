@@ -2,7 +2,11 @@ from flask import Blueprint, request
 
 from extensions.db import db
 from models.category import Category
-from models.qa import QaKnowledge
+from services.category_service import (
+    count_category_questions,
+    refresh_category_question_count,
+    sync_categories_from_qa,
+)
 from utils.auth import admin_required
 from utils.response import fail, success
 
@@ -17,16 +21,11 @@ def get_sort_order(value):
         return 0
 
 
-def refresh_question_count(category):
-    category.question_count = QaKnowledge.query.filter(
-        QaKnowledge.category == category.name,
-        QaKnowledge.status != "已停用",
-    ).count()
-
-
 @admin_category_bp.get("/list")
 @admin_required
 def list_categories():
+    sync_categories_from_qa()
+    db.session.commit()
     records = Category.query.order_by(Category.sort_order.asc(), Category.id.asc()).all()
     return success([item.to_dict() for item in records], "查询成功")
 
@@ -48,6 +47,7 @@ def create_category():
     category = Category(
         name=name,
         description=description,
+        question_count=count_category_questions(name),
         sort_order=sort_order,
         status=status,
     )
@@ -78,7 +78,9 @@ def update_category(category_id):
         if exists:
             return fail("分类名称已存在")
 
+        old_name = category.name
         category.name = name
+        refresh_category_question_count(old_name)
 
     if "description" in payload:
         category.description = (payload.get("description") or "").strip()
@@ -89,7 +91,7 @@ def update_category(category_id):
     if "status" in payload:
         category.status = (payload.get("status") or "").strip()
 
-    refresh_question_count(category)
+    refresh_category_question_count(category.name)
     db.session.commit()
 
     return success(category.to_dict(), "修改成功")

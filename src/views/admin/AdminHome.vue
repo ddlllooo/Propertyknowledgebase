@@ -119,7 +119,8 @@ const overview = reactive({
   todayConsultCount: 0,
   pendingFeedback: 0,
   needHumanCount: 0,
-  helpfulRate: 0
+  helpfulRate: 0,
+  helpfulRateText: '暂无数据'
 })
 const dailyTrend = ref([])
 const unmatchedQuestions = ref([])
@@ -158,7 +159,7 @@ const metrics = computed(() => [
   },
   {
     label: '答案有帮助率',
-    value: `${overview.helpfulRate}%`,
+    value: overview.helpfulRateText,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
   },

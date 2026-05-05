@@ -1,9 +1,14 @@
+from datetime import datetime, time, timedelta
+
 from flask import Blueprint, request
+from sqlalchemy import func
 from sqlalchemy import or_
 
 from extensions.db import db
 from models.category import Category
+from models.chat_log import ChatLog
 from models.qa import QaKnowledge
+from services.feedback_metrics import get_helpful_rate_summary
 from utils.response import fail, success
 
 
@@ -83,3 +88,49 @@ def categories():
         .all()
     )
     return success([item.to_dict() for item in records], "查询成功")
+
+
+@qa_bp.get("/home-summary")
+def home_summary():
+    today = datetime.now().date()
+    start = datetime.combine(today, time.min)
+    end = start + timedelta(days=1)
+
+    category_records = (
+        QaKnowledge.query.with_entities(
+            QaKnowledge.category.label("name"),
+            func.count(QaKnowledge.id).label("count"),
+        )
+        .filter(QaKnowledge.status != "已停用")
+        .group_by(QaKnowledge.category)
+        .order_by(func.count(QaKnowledge.id).desc(), QaKnowledge.category.asc())
+        .all()
+    )
+    categories = [
+        {
+            "name": name or "未分类",
+            "count": count,
+        }
+        for name, count in category_records
+    ]
+
+    helpful_summary = get_helpful_rate_summary()
+
+    return success(
+        {
+            "knowledgeCount": QaKnowledge.query.filter(
+                QaKnowledge.status != "已停用"
+            ).count(),
+            "todayConsultCount": ChatLog.query.filter(
+                ChatLog.created_at >= start,
+                ChatLog.created_at < end,
+            ).count(),
+            "topCategory": categories[0]["name"] if categories else "暂无",
+            "categories": categories,
+            "hitQuestionCount": helpful_summary["hitQuestionCount"],
+            "missedQuestionCount": helpful_summary["missedQuestionCount"],
+            "helpfulRate": helpful_summary["helpfulRate"],
+            "helpfulRateText": helpful_summary["helpfulRateText"],
+        },
+        "查询成功",
+    )

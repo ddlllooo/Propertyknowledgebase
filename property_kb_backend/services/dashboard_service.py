@@ -5,6 +5,7 @@ from sqlalchemy import func
 from models.chat_log import ChatLog
 from models.feedback import Feedback
 from models.qa import QaKnowledge
+from services.feedback_metrics import get_helpful_rate_summary
 
 
 def percent(part, total):
@@ -26,8 +27,7 @@ def get_overview():
     ).count()
     total_consult_count = ChatLog.query.count()
     hit_count = ChatLog.query.filter_by(hit_status="已命中").count()
-    feedback_count = Feedback.query.count()
-    helpful_count = Feedback.query.filter_by(feedback_type="有帮助").count()
+    helpful_summary = get_helpful_rate_summary()
 
     return {
         "knowledgeCount": knowledge_count,
@@ -35,7 +35,10 @@ def get_overview():
         "todayConsultCount": today_consult_count,
         "totalConsultCount": total_consult_count,
         "hitRate": percent(hit_count, total_consult_count),
-        "helpfulRate": percent(helpful_count, feedback_count),
+        "hitQuestionCount": helpful_summary["hitQuestionCount"],
+        "missedQuestionCount": helpful_summary["missedQuestionCount"],
+        "helpfulRate": helpful_summary["helpfulRate"],
+        "helpfulRateText": helpful_summary["helpfulRateText"],
         "pendingFeedback": Feedback.query.filter_by(status="待处理").count(),
         "needHumanCount": ChatLog.query.filter_by(need_human=True).count(),
     }

@@ -164,7 +164,7 @@
       </div>
 
       <div class="import-note">
-        <span>模板需包含：标准问题（question）、标准答案（answer）、分类（category）、关键词（keywords）、来源（source）、状态（status）。</span>
+        <span>模板需包含：标准问题（question）、标准答案（answer）、分类（category）、关键词（keywords）、来源（source）、状态（status）；新分类可填写分类描述（categoryDescription）。</span>
         <span>关键词可以填写多个，请用中文逗号、英文逗号或分号分隔。</span>
       </div>
 
@@ -184,6 +184,7 @@
         <el-table-column type="index" label="#" width="56" />
         <el-table-column prop="question" label="标准问题" min-width="180" />
         <el-table-column prop="category" label="分类" width="110" />
+        <el-table-column prop="categoryDescription" label="分类描述" min-width="170" />
         <el-table-column label="关键词" min-width="160">
           <template #default="{ row }">{{ row.keywords.join('，') }}</template>
         </el-table-column>
@@ -377,13 +378,14 @@ const submitQaForm = async () => {
   }
 
   dialogVisible.value = false
-  await fetchQaRecords()
+  await Promise.all([fetchQaRecords(), fetchCategories()])
 }
 
 const toggleStatus = async (row) => {
   const status = row.status === '已发布' ? '已停用' : '已发布'
   await updateQa(row.id, { status })
   row.status = status
+  await fetchCategories()
   ElMessage.success(`已${row.status}该问答`)
 }
 
@@ -394,7 +396,7 @@ const handleDelete = async (row) => {
     cancelButtonText: '取消'
   })
   await deleteQa(row.id)
-  await fetchQaRecords()
+  await Promise.all([fetchQaRecords(), fetchCategories()])
   ElMessage.success('删除成功')
 }
 
@@ -409,11 +411,12 @@ const handleImport = () => {
 
 const downloadImportTemplate = () => {
   const rows = [
-    ['question', 'answer', 'category', 'keywords', 'source', 'status'],
+    ['question', 'answer', 'category', 'categoryDescription', 'keywords', 'source', 'status'],
     [
       '物业费电子发票在哪里开？',
       '线上缴费完成后，可在社区小程序缴费记录中申请电子发票。',
       '物业缴费',
+      '物业费、水电公摊、账单查询、票据开具等缴费相关知识。',
       '物业费，电子发票，票据',
       '管理员导入',
       '已发布'
@@ -545,6 +548,7 @@ const normalizeImportRows = (csvRows) => {
       question: record.question,
       answer: record.answer,
       category: record.category,
+      categoryDescription: record.categoryDescription || record.category_description || '',
       keywords: splitKeywords(record.keywords),
       source: record.source || '批量导入',
       status: record.status || '已发布'
@@ -570,7 +574,7 @@ const submitImportRows = async () => {
     }
     ElMessage.success(`成功导入 ${importRows.value.length} 条问答`)
     importVisible.value = false
-    await fetchQaRecords()
+    await Promise.all([fetchQaRecords(), fetchCategories()])
   } finally {
     importLoading.value = false
   }

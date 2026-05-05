@@ -20,7 +20,7 @@
           <span>智能匹配标准答案</span>
         </div>
         <div class="ring">
-          <strong>88%</strong>
+          <strong>{{ homeSummary.helpfulRateText }}</strong>
           <small>回答有帮助率</small>
         </div>
       </div>
@@ -81,7 +81,7 @@
         </div>
         <div class="category-note">
           <el-icon><TrendCharts /></el-icon>
-          今日咨询集中在报修服务、物业缴费和停车管理三个方向。
+          {{ categoryNote }}
         </div>
       </div>
     </section>
@@ -91,33 +91,40 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, ChatDotRound, Search, Service } from '@element-plus/icons-vue'
-import { getCategories, getQaList } from '../../api/qa'
+import { getHomeSummary, getQaList } from '../../api/qa'
 
 const qaRecords = ref([])
-const categories = ref([])
+const homeSummary = ref({
+  knowledgeCount: 0,
+  todayConsultCount: 0,
+  topCategory: '暂无',
+  categories: [],
+  helpfulRate: 0,
+  helpfulRateText: '暂无数据'
+})
 
 const stats = computed(() => [
   {
     label: '知识库问题总数',
-    value: qaRecords.value.length,
+    value: homeSummary.value.knowledgeCount,
     icon: 'Collection',
     color: 'linear-gradient(135deg, #1178ff, #54a7ff)'
   },
   {
     label: '今日咨询量',
-    value: '-',
+    value: homeSummary.value.todayConsultCount,
     icon: 'ChatLineRound',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
   {
     label: '热门分类',
-    value: categories.value.length,
+    value: homeSummary.value.topCategory,
     icon: 'Grid',
     color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
   },
   {
     label: '回答有帮助率',
-    value: '-',
+    value: homeSummary.value.helpfulRateText,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #ffb020, #ffd26f)'
   }
@@ -136,11 +143,17 @@ const hotQuestions = computed(() =>
 )
 
 const quickCategories = computed(() =>
-  categories.value.map((item, index) => ({
+  homeSummary.value.categories.map((item, index) => ({
     name: item.name,
     type: tagTypes[index % tagTypes.length]
   }))
 )
+
+const categoryNote = computed(() => {
+  const names = homeSummary.value.categories.slice(0, 3).map((item) => item.name)
+  if (!names.length) return '当前知识库暂无可用问题分类。'
+  return `当前知识库主要包含 ${names.join('、')} 等分类。`
+})
 
 const goQuestion = (question) => {
   sessionStorage.setItem('knowledgeKeyword', question)
@@ -153,12 +166,15 @@ const goCategory = (category) => {
 }
 
 onMounted(async () => {
-  const [qaResponse, categoryResponse] = await Promise.all([
+  const [qaResponse, summaryResponse] = await Promise.all([
     getQaList({ page: 1, pageSize: 100 }),
-    getCategories()
+    getHomeSummary()
   ])
   qaRecords.value = qaResponse.data?.list || []
-  categories.value = categoryResponse.data || []
+  homeSummary.value = {
+    ...homeSummary.value,
+    ...(summaryResponse.data || {})
+  }
 })
 </script>
 
@@ -247,8 +263,11 @@ onMounted(async () => {
   position: absolute;
   right: 26px;
   bottom: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 190px;
   height: 190px;
   border-radius: 50%;
@@ -256,11 +275,17 @@ onMounted(async () => {
 }
 
 .ring strong {
-  font-size: 46px;
+  max-width: 82%;
+  font-size: clamp(30px, 3.8vw, 40px);
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .ring small {
-  margin-top: -32px;
+  max-width: 82%;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .stats-grid,

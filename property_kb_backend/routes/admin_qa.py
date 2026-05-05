@@ -2,8 +2,9 @@ from flask import Blueprint, request
 from sqlalchemy import or_
 
 from extensions.db import db
-from models.category import Category
+from models.chat_log import ChatLog
 from models.qa import QaKnowledge
+from services.category_service import ensure_category, refresh_category_question_count
 from utils.auth import admin_required, get_current_user
 from utils.response import fail, success
 
@@ -27,18 +28,14 @@ def normalize_keywords(value):
     return ""
 
 
-def refresh_category_question_count(category_name):
-    if not category_name:
-        return
-
-    category = Category.query.filter_by(name=category_name).first()
-    if not category:
-        return
-
-    category.question_count = QaKnowledge.query.filter(
-        QaKnowledge.category == category_name,
-        QaKnowledge.status != "已停用",
-    ).count()
+def get_optional_positive_int(value):
+    if value in (None, ""):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 @admin_qa_bp.get("/list")
@@ -92,8 +89,10 @@ def create_qa():
     question = (payload.get("question") or "").strip()
     answer = (payload.get("answer") or "").strip()
     category = (payload.get("category") or "").strip()
+    category_description = (payload.get("categoryDescription") or "").strip()
     source = (payload.get("source") or "").strip()
     status = (payload.get("status") or "已发布").strip()
+    chat_log_id = get_optional_positive_int(payload.get("chatLogId"))
 
     if not question:
         return fail("问题不能为空")
@@ -101,6 +100,11 @@ def create_qa():
         return fail("答案不能为空")
 
     current_user = get_current_user()
+    chat_log = db.session.get(ChatLog, chat_log_id) if chat_log_id else None
+    if chat_log_id and not chat_log:
+        return fail("咨询日志不存在", 404)
+
+    ensure_category(category, category_description)
     item = QaKnowledge(
         question=question,
         answer=answer,
@@ -113,6 +117,13 @@ def create_qa():
     )
 
     db.session.add(item)
+    if chat_log:
+        chat_log.answer = answer
+        chat_log.category = category or "未分类"
+        chat_log.hit_status = "已命中"
+        chat_log.need_human = False
+        chat_log.similarity = max(float(chat_log.similarity or 0), 0.86)
+
     refresh_category_question_count(category)
     db.session.commit()
 
@@ -128,6 +139,7 @@ def update_qa(qa_id):
 
     payload = request.get_json(silent=True) or {}
     old_category = item.category
+    category_description = (payload.get("categoryDescription") or "").strip()
 
     if "question" in payload:
         question = (payload.get("question") or "").strip()
@@ -143,6 +155,9 @@ def update_qa(qa_id):
 
     if "category" in payload:
         item.category = (payload.get("category") or "").strip()
+        ensure_category(item.category, category_description)
+    elif category_description:
+        ensure_category(item.category, category_description)
 
     if "keywords" in payload:
         item.keywords = normalize_keywords(payload.get("keywords"))
@@ -178,4 +193,3 @@ def delete_qa(qa_id):
     db.session.commit()
 
     return success(item.to_dict(), "删除成功")
-

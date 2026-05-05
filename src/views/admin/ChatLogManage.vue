@@ -324,15 +324,19 @@ const saveToKnowledgeBase = async () => {
     category: knowledgeForm.category,
     keywords: knowledgeForm.keywords,
     source: knowledgeForm.source,
-    status: '已发布'
+    status: '已发布',
+    chatLogId: activeLog.value?.id
   })
   if (activeLog.value) {
+    activeLog.value.answer = knowledgeForm.answer
+    activeLog.value.category = knowledgeForm.category
     activeLog.value.hitStatus = '已命中'
     activeLog.value.needHuman = false
     activeLog.value.similarity = Math.max(activeLog.value.similarity, 0.86)
   }
   knowledgeVisible.value = false
   detailVisible.value = false
+  await fetchData()
   ElMessage.success('已加入知识库，后续可用于优化 RAG 命中效果')
 }
 

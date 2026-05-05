@@ -6,6 +6,7 @@ from sqlalchemy import or_
 from extensions.db import db
 from models.feedback import Feedback
 from models.qa import QaKnowledge
+from services.category_service import ensure_category, refresh_category_question_count
 from utils.auth import admin_required, get_current_user
 from utils.response import fail, success
 
@@ -117,6 +118,7 @@ def feedback_to_knowledge(feedback_id):
         return fail("答案不能为空")
 
     current_user = get_current_user()
+    ensure_category(category)
     qa = QaKnowledge(
         question=question,
         answer=answer,
@@ -129,6 +131,7 @@ def feedback_to_knowledge(feedback_id):
     )
 
     db.session.add(qa)
+    refresh_category_question_count(category)
     feedback.status = "已处理"
     feedback.admin_reply = "已根据反馈补充至知识库"
     feedback.handled_by = current_user.id
@@ -136,4 +139,3 @@ def feedback_to_knowledge(feedback_id):
     db.session.commit()
 
     return success(qa.to_dict(), "已补充至知识库")
-

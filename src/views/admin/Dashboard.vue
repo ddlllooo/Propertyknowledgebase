@@ -120,6 +120,7 @@ const dashboardData = reactive({
     todayConsultCount: 0,
     hitRate: 0,
     helpfulRate: 0,
+    helpfulRateText: '暂无数据',
     pendingFeedback: 0
   },
   dailyTrend: [],
@@ -153,7 +154,7 @@ const metrics = computed(() => [
   },
   {
     label: '答案有帮助率',
-    value: `${dashboardData.overview.helpfulRate}%`,
+    value: dashboardData.overview.helpfulRateText,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
   },
