@@ -16,7 +16,7 @@
       </div>
     </section>
 
-    <section class="timeline-card soft-card">
+    <section v-loading="loading" class="timeline-card soft-card">
       <el-timeline>
         <el-timeline-item
           v-for="item in filteredHistory"
@@ -58,6 +58,7 @@ const category = ref('全部')
 const hitStatus = ref('all')
 const chatHistory = ref([])
 const categoryList = ref([])
+const loading = ref(false)
 
 const categories = computed(() => ['全部', ...categoryList.value.map((item) => item.name)])
 const hitOptions = [
@@ -81,9 +82,14 @@ const filteredHistory = computed(() => {
 })
 
 const fetchData = async () => {
-  const [historyResponse, categoryResponse] = await Promise.all([getMyHistory(), getCategories()])
-  chatHistory.value = historyResponse.data || []
-  categoryList.value = categoryResponse.data || []
+  loading.value = true
+  try {
+    const [historyResponse, categoryResponse] = await Promise.all([getMyHistory(), getCategories()])
+    chatHistory.value = historyResponse.data || []
+    categoryList.value = categoryResponse.data || []
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(fetchData)

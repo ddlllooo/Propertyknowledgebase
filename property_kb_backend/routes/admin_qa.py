@@ -82,6 +82,64 @@ def list_qa():
     )
 
 
+@admin_qa_bp.post("/batch-create")
+@admin_required
+def batch_create_qa():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items")
+    if not isinstance(items, list) or not items:
+        return fail("请提供待导入的问答列表")
+
+    current_user = get_current_user()
+    created = []
+    errors = []
+
+    for idx, item_data in enumerate(items):
+        question = (item_data.get("question") or "").strip()
+        answer = (item_data.get("answer") or "").strip()
+        category = (item_data.get("category") or "").strip()
+        category_description = (item_data.get("categoryDescription") or "").strip()
+        source = (item_data.get("source") or "").strip()
+        status = (item_data.get("status") or "已发布").strip()
+
+        if not question:
+            errors.append({"row": idx + 1, "message": "问题不能为空"})
+            continue
+        if not answer:
+            errors.append({"row": idx + 1, "message": "答案不能为空"})
+            continue
+        if not category:
+            errors.append({"row": idx + 1, "message": "分类不能为空"})
+            continue
+
+        ensure_category(category, category_description)
+        item = QaKnowledge(
+            question=question,
+            answer=answer,
+            category=category,
+            keywords=normalize_keywords(item_data.get("keywords")),
+            source=source,
+            status=status,
+            created_by=current_user.id,
+            updated_by=current_user.id,
+        )
+        db.session.add(item)
+        created.append(item)
+        refresh_category_question_count(category)
+
+    if created:
+        db.session.commit()
+
+    return success(
+        {
+            "createdCount": len(created),
+            "errorCount": len(errors),
+            "errors": errors,
+        },
+        f"成功导入 {len(created)} 条",
+    )
+
+
 @admin_qa_bp.post("/create")
 @admin_required
 def create_qa():

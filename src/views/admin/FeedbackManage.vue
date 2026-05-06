@@ -37,7 +37,7 @@
       <el-input v-model="filters.keyword" clearable placeholder="搜索问题、回答或建议" :prefix-icon="Search" />
     </section>
 
-    <section class="feedback-list">
+    <section v-loading="loading" class="feedback-list">
       <article v-for="item in filteredFeedback" :key="item.id" class="feedback-card">
         <div class="card-main">
           <div class="question-block">
@@ -192,6 +192,7 @@ const knowledgeVisible = ref(false)
 const activeFeedback = ref(null)
 const processRemark = ref('')
 const knowledgeFormRef = ref()
+const loading = ref(false)
 
 const filters = reactive({
   status: '全部',
@@ -285,8 +286,13 @@ const openProcessDialog = (item) => {
 }
 
 const refreshFeedback = async () => {
-  const response = await getFeedbackList({ page: 1, pageSize: 200 })
-  feedbackRecords.value = response.data?.list || []
+  loading.value = true
+  try {
+    const response = await getFeedbackList({ page: 1, pageSize: 200 })
+    feedbackRecords.value = response.data?.list || []
+  } finally {
+    loading.value = false
+  }
 }
 
 const markProcessed = async () => {
@@ -359,13 +365,18 @@ const saveToKnowledgeBase = async () => {
 }
 
 onMounted(async () => {
-  const [categoryResponse, qaResponse] = await Promise.all([
-    getCategoryList(),
-    getAdminQaList({ page: 1, pageSize: 200 })
-  ])
-  categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
-  qaRecords.value = qaResponse.data?.list || []
-  await refreshFeedback()
+  loading.value = true
+  try {
+    const [categoryResponse, qaResponse] = await Promise.all([
+      getCategoryList(),
+      getAdminQaList({ page: 1, pageSize: 200 })
+    ])
+    categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
+    qaRecords.value = qaResponse.data?.list || []
+    await refreshFeedback()
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

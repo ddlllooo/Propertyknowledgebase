@@ -212,7 +212,7 @@ onMounted(async () => {
 }
 
 .hero h1 {
-  max-width: 760px;
+  max-width: 820px;
   margin: 26px 0 18px;
   font-size: clamp(32px, 4.8vw, 54px);
   line-height: 1.18;
@@ -253,8 +253,8 @@ onMounted(async () => {
 
 .pulse-card {
   position: absolute;
-  top: 18px;
-  right: 0;
+  top: -10px;
+  right: 26px;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -266,7 +266,7 @@ onMounted(async () => {
 .ring {
   position: absolute;
   right: 26px;
-  bottom: 0;
+  bottom: -20px;
   display: flex;
   flex-direction: column;
   align-items: center;

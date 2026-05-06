@@ -19,7 +19,7 @@ class QaKnowledge(db.Model):
     updated_by = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+        db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, index=True
     )
 
     def to_dict(self):

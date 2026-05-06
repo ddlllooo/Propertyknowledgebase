@@ -26,7 +26,7 @@
       </button>
     </section>
 
-    <section class="knowledge-grid">
+    <section v-loading="loading" class="knowledge-grid">
       <article v-for="item in filteredList" :key="item.id" class="knowledge-card" @click="openDetail(item)">
         <div class="card-top">
           <el-tag round>{{ item.category }}</el-tag>
@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, DocumentCopy, Search, View } from '@element-plus/icons-vue'
 import { getCategories, getQaDetail, getQaList } from '../../api/qa'
@@ -131,10 +131,14 @@ onMounted(async () => {
   await Promise.all([fetchCategories(), fetchQaList()])
 })
 
-let searchTimer
+let searchTimer = null
 watch([keyword, activeCategory], () => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(fetchQaList, 250)
+})
+
+onUnmounted(() => {
+  clearTimeout(searchTimer)
 })
 
 const filteredList = computed(() => qaRecords.value)

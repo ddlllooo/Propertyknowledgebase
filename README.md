@@ -226,8 +226,6 @@ npm run build
 
 ### 1. 登录
 
-访问 `http://localhost:5173/login`。
-
 操作步骤：
 
 1. 输入账号或邮箱。
@@ -481,12 +479,6 @@ npm run build
 5. 检查页面预览和错误提示。
 6. 点击“导入 N 条”。
 7. 导入完成后重建向量库。
-
-CSV 字段：
-
-```text
-question,answer,category,keywords,source,status
-```
 
 填写规则：
 

@@ -19,12 +19,12 @@
 
     <section class="login-card">
       <div class="card-head">
-        <span>平台登录</span>
-        <small>普通用户 / 管理员</small>
+        <span>登录</span>
+        <small>普通用户</small>
       </div>
       <el-form :model="form" :rules="rules" ref="loginFormRef" size="large" @keyup.enter="handleLogin">
         <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="请输入账号 user 或 admin" :prefix-icon="User" />
+          <el-input v-model="form.username" placeholder="请输入姓名或邮箱" :prefix-icon="User" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input
@@ -47,6 +47,9 @@
 
     <el-dialog v-model="registerVisible" title="注册账号" width="460px" @closed="resetRegisterForm">
       <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top" size="large">
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="registerForm.name" placeholder="请输入您的姓名" :prefix-icon="User" />
+        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="registerForm.email" placeholder="请输入邮箱" :prefix-icon="Message" />
         </el-form-item>
@@ -97,6 +100,7 @@ const form = reactive({
 })
 
 const registerForm = reactive({
+  name: '',
   email: '',
   password: '',
   confirmPassword: ''
@@ -136,6 +140,10 @@ const rules = {
 }
 
 const registerRules = {
+  name: [
+    { required: true, message: '请输入姓名', trigger: 'blur' },
+    { min: 1, max: 50, message: '姓名长度应在 1 到 50 个字符之间', trigger: 'blur' }
+  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change'] }
@@ -197,6 +205,7 @@ const openRegisterDialog = () => {
 const resetRegisterForm = () => {
   registerFormRef.value?.resetFields()
   Object.assign(registerForm, {
+    name: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -208,12 +217,13 @@ const handleRegister = async () => {
   registerLoading.value = true
   try {
     await register({
+      name: registerForm.name,
       email: registerForm.email,
       password: registerForm.password,
       confirmPassword: registerForm.confirmPassword
     })
     ElMessage.success('注册成功，请登录')
-    form.username = registerForm.email
+    form.username = registerForm.name
     registerVisible.value = false
     resetRegisterForm()
   } catch (error) {

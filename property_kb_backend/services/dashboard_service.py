@@ -2,6 +2,7 @@ from datetime import datetime, time, timedelta
 
 from sqlalchemy import func
 
+from extensions.db import db
 from models.chat_log import ChatLog
 from models.feedback import Feedback
 from models.qa import QaKnowledge
@@ -46,27 +47,40 @@ def get_overview():
 
 def get_daily_trend(days=7):
     today = datetime.now().date()
+    start_date = today - timedelta(days=days - 1)
+    start_dt = datetime.combine(start_date, time.min)
+
+    consult_rows = (
+        db.session.query(
+            func.date(ChatLog.created_at).label("day"),
+            func.count(ChatLog.id).label("cnt"),
+        )
+        .filter(ChatLog.created_at >= start_dt)
+        .group_by(func.date(ChatLog.created_at))
+        .all()
+    )
+    consult_map = {str(row.day): row.cnt for row in consult_rows}
+
+    feedback_rows = (
+        db.session.query(
+            func.date(Feedback.created_at).label("day"),
+            func.count(Feedback.id).label("cnt"),
+        )
+        .filter(Feedback.created_at >= start_dt)
+        .group_by(func.date(Feedback.created_at))
+        .all()
+    )
+    feedback_map = {str(row.day): row.cnt for row in feedback_rows}
+
     result = []
-
-    for offset in range(days - 1, -1, -1):
-        day = today - timedelta(days=offset)
-        start = datetime.combine(day, time.min)
-        end = start + timedelta(days=1)
-
-        consult_count = ChatLog.query.filter(
-            ChatLog.created_at >= start,
-            ChatLog.created_at < end,
-        ).count()
-        feedback_count = Feedback.query.filter(
-            Feedback.created_at >= start,
-            Feedback.created_at < end,
-        ).count()
-
+    for offset in range(days):
+        day = today - timedelta(days=days - 1 - offset)
+        key = day.strftime("%Y-%m-%d")
         result.append(
             {
                 "date": day.strftime("%m-%d"),
-                "consultCount": consult_count,
-                "feedbackCount": feedback_count,
+                "consultCount": consult_map.get(key, 0),
+                "feedbackCount": feedback_map.get(key, 0),
             }
         )
 
@@ -75,27 +89,32 @@ def get_daily_trend(days=7):
 
 def get_hit_rate_trend(days=7):
     today = datetime.now().date()
+    start_date = today - timedelta(days=days - 1)
+    start_dt = datetime.combine(start_date, time.min)
+
+    rows = (
+        db.session.query(
+            func.date(ChatLog.created_at).label("day"),
+            func.count(ChatLog.id).label("total"),
+            func.sum(
+                func.if_(ChatLog.hit_status == "已命中", 1, 0)
+            ).label("hits"),
+        )
+        .filter(ChatLog.created_at >= start_dt)
+        .group_by(func.date(ChatLog.created_at))
+        .all()
+    )
+    trend_map = {str(row.day): (row.total, row.hits or 0) for row in rows}
+
     result = []
-
-    for offset in range(days - 1, -1, -1):
-        day = today - timedelta(days=offset)
-        start = datetime.combine(day, time.min)
-        end = start + timedelta(days=1)
-
-        total_count = ChatLog.query.filter(
-            ChatLog.created_at >= start,
-            ChatLog.created_at < end,
-        ).count()
-        hit_count = ChatLog.query.filter(
-            ChatLog.created_at >= start,
-            ChatLog.created_at < end,
-            ChatLog.hit_status == "已命中",
-        ).count()
-
+    for offset in range(days):
+        day = today - timedelta(days=days - 1 - offset)
+        key = day.strftime("%Y-%m-%d")
+        total, hits = trend_map.get(key, (0, 0))
         result.append(
             {
                 "date": day.strftime("%m-%d"),
-                "hitRate": percent(hit_count, total_count),
+                "hitRate": percent(hits, total),
             }
         )
 

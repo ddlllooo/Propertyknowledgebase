@@ -4,7 +4,7 @@
       <div>
         <el-tag class="title-tag" round>Knowledge Maintenance</el-tag>
         <h1>知识库维护</h1>
-        <p>维护物业高频问答、标准答案、分类与关键词，支持后续 RAG 智能问答调用。</p>
+        <p>维护物业高频问答、标准答案、分类与关键词。</p>
       </div>
       <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增问答</el-button>
     </section>
@@ -73,10 +73,10 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="viewCount" label="查看次数" width="104" />
-        <el-table-column prop="askCount" label="咨询命中次数" width="126" />
-        <el-table-column prop="status" label="状态" width="96">
-          <template #default="{ row }">
+        <el-table-column prop="viewCount" label="查看次数" width="104" align="center"/>
+        <el-table-column prop="askCount" label="咨询命中次数" width="110" align="center"/>
+        <el-table-column prop="status" label="状态" width="90" >
+          <template #default="{ row }" >
             <el-tag :type="statusTagType(row.status)" round>{{ row.status }}</el-tag>
           </template>
         </el-table-column>
@@ -218,7 +218,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
-import { createQa, deleteQa, getAdminQaList, updateQa } from '../../api/adminQa'
+import { batchCreateQa, createQa, deleteQa, getAdminQaList, updateQa } from '../../api/adminQa'
 import { getCategoryList } from '../../api/adminCategory'
 import { rebuildVector } from '../../api/vector'
 
@@ -411,7 +411,7 @@ const handleImport = () => {
 
 const downloadImportTemplate = () => {
   const rows = [
-    ['question', 'answer', 'category', 'categoryDescription', 'keywords', 'source', 'status'],
+    ['question（标准问题）', 'answer（标准答案）', 'category（分类）', 'categoryDescription（分类描述）', 'keywords（关键词）', 'source（来源）', 'status（状态）'],
     [
       '物业费电子发票在哪里开？',
       '线上缴费完成后，可在社区小程序缴费记录中申请电子发票。',
@@ -520,7 +520,7 @@ const parseCsv = (content) => {
 
 const normalizeImportRows = (csvRows) => {
   const [header = [], ...body] = csvRows
-  const headerMap = header.map((item) => item.trim())
+  const headerMap = header.map((item) => item.trim().replace(/（[^）]*）/, '').trim())
   const requiredHeaders = ['question', 'answer', 'category', 'keywords', 'source', 'status']
   const errors = []
 
@@ -569,10 +569,20 @@ const submitImportRows = async () => {
   if (!importRows.value.length) return
   importLoading.value = true
   try {
-    for (const row of importRows.value) {
-      await createQa(row)
+    const response = await batchCreateQa(importRows.value.map((row) => ({
+      question: row.question,
+      answer: row.answer,
+      category: row.category,
+      categoryDescription: row.categoryDescription,
+      keywords: row.keywords,
+      source: row.source,
+      status: row.status
+    })))
+    if (response.data?.errorCount) {
+      ElMessage.warning(`导入完成：成功 ${response.data.createdCount} 条，失败 ${response.data.errorCount} 条`)
+    } else {
+      ElMessage.success(`成功导入 ${importRows.value.length} 条问答`)
     }
-    ElMessage.success(`成功导入 ${importRows.value.length} 条问答`)
     importVisible.value = false
     await Promise.all([fetchQaRecords(), fetchCategories()])
   } finally {

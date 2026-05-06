@@ -52,7 +52,7 @@
       </el-button>
     </section>
 
-    <section class="table-card">
+    <section v-loading="loading" class="table-card">
       <el-table :data="filteredLogs" row-key="id" stripe>
         <el-table-column prop="createdAt" label="咨询时间" width="152" />
         <el-table-column prop="username" label="用户账号" width="110" />
@@ -210,6 +210,7 @@ const detailVisible = ref(false)
 const knowledgeVisible = ref(false)
 const activeLog = ref(null)
 const knowledgeFormRef = ref()
+const loading = ref(false)
 
 const filters = reactive({
   keyword: '',
@@ -341,14 +342,19 @@ const saveToKnowledgeBase = async () => {
 }
 
 const fetchData = async () => {
-  const [categoryResponse, logResponse, qaResponse] = await Promise.all([
-    getCategoryList(),
-    getChatLogs({ page: 1, pageSize: 300 }),
-    getAdminQaList({ page: 1, pageSize: 200 })
-  ])
-  categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
-  logRecords.value = logResponse.data?.list || []
-  qaRecords.value = qaResponse.data?.list || []
+  loading.value = true
+  try {
+    const [categoryResponse, logResponse, qaResponse] = await Promise.all([
+      getCategoryList(),
+      getChatLogs({ page: 1, pageSize: 300 }),
+      getAdminQaList({ page: 1, pageSize: 200 })
+    ])
+    categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
+    logRecords.value = logResponse.data?.list || []
+    qaRecords.value = qaResponse.data?.list || []
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(fetchData)

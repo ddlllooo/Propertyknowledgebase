@@ -26,15 +26,22 @@ def is_valid_password(password):
 @auth_bp.post("/register")
 def register():
     payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
     email = (payload.get("email") or "").strip()
     password = payload.get("password") or ""
     confirm_password = payload.get("confirmPassword") or ""
 
+    if not name:
+        return fail("姓名不能为空")
+    if len(name) > 50:
+        return fail("姓名长度不能超过 50 个字符")
     if not email:
         return fail("邮箱不能为空")
     if not EMAIL_PATTERN.match(email):
         return fail("邮箱格式不正确")
-    if User.query.filter(or_(User.email == email, User.username == email)).first():
+    if User.query.filter(User.username == name).first():
+        return fail("该姓名已被注册")
+    if User.query.filter(User.email == email).first():
         return fail("邮箱已注册")
     if not password:
         return fail("密码不能为空")
@@ -47,7 +54,7 @@ def register():
 
     nickname = email.split("@", 1)[0]
     user = User(
-        username=email,
+        username=name,
         email=email,
         password_hash=generate_password_hash(password),
         role="user",

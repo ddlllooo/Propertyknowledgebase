@@ -13,10 +13,10 @@ class ChatLog(db.Model):
     answer = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(80), nullable=False, default="未分类")
     similarity = db.Column(db.Float, nullable=False, default=0)
-    hit_status = db.Column(db.String(20), nullable=False, default="未命中")
-    need_human = db.Column(db.Boolean, nullable=False, default=True)
+    hit_status = db.Column(db.String(20), nullable=False, default="未命中", index=True)
+    need_human = db.Column(db.Boolean, nullable=False, default=True, index=True)
     response_time = db.Column(db.Float, nullable=False, default=0)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now, index=True)
 
     def to_dict(self):
         return {

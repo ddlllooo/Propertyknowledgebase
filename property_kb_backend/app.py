@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -31,9 +33,12 @@ def create_app():
     app.config.from_object(Config)
     app.json.ensure_ascii = False
 
+    cors_origins = os.environ.get(
+        "CORS_ORIGINS", "http://localhost:5173"
+    ).split(",")
     CORS(
         app,
-        resources={r"/api/*": {"origins": "http://localhost:5173"}},
+        resources={r"/api/*": {"origins": cors_origins}},
         supports_credentials=True,
     )
 
@@ -79,6 +84,13 @@ def create_app():
         return fail("登录凭证已过期", 401)
 
     warm_up_embeddings(app)
+
+    try:
+        from rag.faiss_store import preload_faiss_index
+        preload_faiss_index()
+        app.logger.info("FAISS index preloaded into memory")
+    except Exception as exc:
+        app.logger.warning("FAISS index preload skipped: %s", exc)
 
     return app
 

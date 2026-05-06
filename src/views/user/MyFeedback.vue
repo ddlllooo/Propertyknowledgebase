@@ -21,7 +21,7 @@
       </button>
     </section>
 
-    <section class="feedback-grid">
+    <section v-loading="loading" class="feedback-grid">
       <article v-for="item in filteredFeedback" :key="item.id" class="feedback-card soft-card">
         <div class="feedback-head">
           <div>
@@ -57,6 +57,7 @@ import { getMyFeedback } from '../../api/feedback'
 const currentStatus = ref('全部')
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
 const feedbackList = ref([])
+const loading = ref(false)
 
 const statusTypeMap = {
   待处理: 'warning',
@@ -71,8 +72,13 @@ const filteredFeedback = computed(() => {
 })
 
 onMounted(async () => {
-  const response = await getMyFeedback()
-  feedbackList.value = response.data || []
+  loading.value = true
+  try {
+    const response = await getMyFeedback()
+    feedbackList.value = response.data || []
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
