@@ -3,6 +3,7 @@ from extensions.db import db
 from models.category import Category
 from models.chat_log import ChatLog
 from models.feedback import Feedback
+from models.password_reset_request import PasswordResetRequest
 from models.qa import QaKnowledge
 from models.user import User
 

@@ -26,6 +26,8 @@ def login_required_user(fn):
             return fail("请先登录", 401)
         if user.status != "启用":
             return fail("用户已停用", 403)
+        if user.must_change_password:
+            return fail("请先修改初始密码", 423)
         return fn(*args, **kwargs)
 
     return wrapper

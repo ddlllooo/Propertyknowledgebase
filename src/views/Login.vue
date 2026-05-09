@@ -43,6 +43,9 @@
         还没有账号？
         <button type="button" @click="openRegisterDialog">立即注册</button>
       </div>
+      <div class="forgot-entry">
+        <button type="button" @click="openResetDialog">忘记密码？</button>
+      </div>
     </section>
 
     <el-dialog v-model="registerVisible" title="注册账号" width="460px" @closed="resetRegisterForm">
@@ -77,6 +80,61 @@
         <el-button type="primary" :loading="registerLoading" @click="handleRegister">注册</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="resetVisible" title="找回密码" width="460px" @closed="resetResetForm">
+      <!-- Step 1: Submit request -->
+      <div v-if="resetStep === 1">
+        <p style="color: #6b7c93; margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。</p>
+        <el-input
+          v-model="resetUsername"
+          placeholder="请输入用户名或邮箱"
+          :prefix-icon="User"
+          size="large"
+        />
+      </div>
+      <!-- Step 2: Request submitted, can query status -->
+      <div v-if="resetStep === 2">
+        <el-alert type="success" :closable="false" show-icon style="margin-bottom: 16px;">
+          重置请求已提交，请等待管理员处理。稍后可在此查询结果。
+        </el-alert>
+        <el-input
+          v-model="resetUsername"
+          placeholder="请输入用户名或邮箱查询状态"
+          :prefix-icon="User"
+          size="large"
+        />
+      </div>
+      <!-- Step 3: Show result -->
+      <div v-if="resetStep === 3">
+        <div v-if="resetResult.status === '已处理'">
+          <el-alert type="success" :closable="false" show-icon style="margin-bottom: 16px;">
+            管理员已重置您的密码，请使用以下临时密码登录：
+          </el-alert>
+          <div class="temp-password-box">
+            <span class="temp-password-text">{{ resetResult.tempPassword }}</span>
+            <el-button type="primary" link @click="copyTempPassword">复制</el-button>
+          </div>
+          <p style="color: #e6a23c; margin-top: 12px; font-size: 13px;">
+            注意：首次登录后必须修改密码才能正常使用系统。
+          </p>
+        </div>
+        <div v-else-if="resetResult.status === '待处理'">
+          <el-alert type="warning" :closable="false" show-icon>
+            请求处理中，请稍后再试。
+          </el-alert>
+        </div>
+        <div v-else>
+          <el-alert type="info" :closable="false" show-icon>
+            未找到密码重置请求。
+          </el-alert>
+        </div>
+      </div>
+      <template #footer>
+        <el-button v-if="resetStep === 3" @click="resetStep = 1">重新查询</el-button>
+        <el-button v-if="resetStep === 1" type="primary" :loading="resetLoading" @click="handleRequestReset">提交请求</el-button>
+        <el-button v-if="resetStep === 2" type="primary" :loading="resetLoading" @click="handleQueryStatus">查询状态</el-button>
+      </template>
+    </el-dialog>
   </main>
 </template>
 
@@ -85,7 +143,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Connection, Lock, Message, User } from '@element-plus/icons-vue'
-import { login, register } from '../api/auth'
+import { login, register, requestPasswordReset, getPasswordResetStatus } from '../api/auth'
 
 const router = useRouter()
 const loginFormRef = ref()
@@ -93,6 +151,11 @@ const registerFormRef = ref()
 const loading = ref(false)
 const registerLoading = ref(false)
 const registerVisible = ref(false)
+const resetVisible = ref(false)
+const resetLoading = ref(false)
+const resetStep = ref(1)
+const resetUsername = ref('')
+const resetResult = ref({})
 
 const form = reactive({
   username: 'user',
@@ -172,7 +235,8 @@ const normalizeLoginResult = (response) => {
   return {
     token: data?.token || data?.accessToken || data?.access_token,
     role: data?.role || user?.role || 'user',
-    username: data?.username || user?.username || data?.email || user?.email || form.username
+    username: data?.username || user?.username || data?.email || user?.email || form.username,
+    mustChangePassword: data?.mustChangePassword || false
   }
 }
 
@@ -189,6 +253,14 @@ const handleLogin = async () => {
     sessionStorage.setItem('token', userInfo.token)
     sessionStorage.setItem('role', userInfo.role)
     sessionStorage.setItem('username', userInfo.username)
+
+    if (userInfo.mustChangePassword) {
+      sessionStorage.setItem('mustChangePassword', 'true')
+      ElMessage.warning('请先修改初始密码')
+      router.push('/change-password')
+      return
+    }
+
     ElMessage.success('登录成功')
     router.push(userInfo.role === 'admin' ? '/admin/home' : '/user/home')
   } catch (error) {
@@ -230,6 +302,60 @@ const handleRegister = async () => {
     ElMessage.error(getErrorMessage(error, '注册失败'))
   } finally {
     registerLoading.value = false
+  }
+}
+
+const openResetDialog = () => {
+  resetVisible.value = true
+  resetStep.value = 1
+  resetUsername.value = ''
+  resetResult.value = {}
+}
+
+const resetResetForm = () => {
+  resetStep.value = 1
+  resetUsername.value = ''
+  resetResult.value = {}
+}
+
+const handleRequestReset = async () => {
+  if (!resetUsername.value.trim()) {
+    ElMessage.warning('请输入用户名或邮箱')
+    return
+  }
+  resetLoading.value = true
+  try {
+    await requestPasswordReset({ username: resetUsername.value.trim() })
+    ElMessage.success('重置请求已提交')
+    resetStep.value = 2
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '提交失败'))
+  } finally {
+    resetLoading.value = false
+  }
+}
+
+const handleQueryStatus = async () => {
+  if (!resetUsername.value.trim()) {
+    ElMessage.warning('请输入用户名或邮箱')
+    return
+  }
+  resetLoading.value = true
+  try {
+    const response = await getPasswordResetStatus({ username: resetUsername.value.trim() })
+    resetResult.value = response?.data || {}
+    resetStep.value = 3
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '查询失败'))
+  } finally {
+    resetLoading.value = false
+  }
+}
+
+const copyTempPassword = () => {
+  if (resetResult.value?.tempPassword) {
+    navigator.clipboard.writeText(resetResult.value.tempPassword)
+    ElMessage.success('已复制到剪贴板')
   }
 }
 </script>
@@ -356,6 +482,43 @@ const handleRegister = async () => {
 
 .register-entry button:hover {
   color: #13bea7;
+}
+
+.forgot-entry {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.forgot-entry button {
+  padding: 0;
+  border: 0;
+  color: #6b7c93;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.forgot-entry button:hover {
+  color: #0e6fff;
+}
+
+.temp-password-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f0f9ff;
+  border: 1px solid #b3d8ff;
+}
+
+.temp-password-text {
+  font-size: 24px;
+  font-weight: 800;
+  color: #172b4d;
+  letter-spacing: 2px;
+  font-family: monospace;
 }
 
 @media (max-width: 980px) {

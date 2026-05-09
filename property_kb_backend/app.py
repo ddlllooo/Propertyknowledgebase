@@ -51,6 +51,7 @@ def create_app():
     from routes.admin_chat_logs import admin_chat_logs_bp
     from routes.admin_dashboard import admin_dashboard_bp
     from routes.admin_feedback import admin_feedback_bp
+    from routes.admin_password_reset import admin_password_reset_bp
     from routes.admin_qa import admin_qa_bp
     from routes.chat import chat_bp
     from routes.feedback import feedback_bp
@@ -63,6 +64,7 @@ def create_app():
     app.register_blueprint(chat_bp, url_prefix="/api/chat")
     app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
     app.register_blueprint(admin_feedback_bp, url_prefix="/api/admin/feedback")
+    app.register_blueprint(admin_password_reset_bp, url_prefix="/api/admin/password-reset")
     app.register_blueprint(admin_chat_logs_bp, url_prefix="/api/admin")
     app.register_blueprint(admin_dashboard_bp, url_prefix="/api/admin/dashboard")
     app.register_blueprint(vector_bp, url_prefix="/api/admin/vector")

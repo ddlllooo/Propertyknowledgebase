@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import UserLayout from '../layouts/UserLayout.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
+import ChangePassword from '../views/ChangePassword.vue'
 import UserHome from '../views/user/UserHome.vue'
 import KnowledgeBase from '../views/user/KnowledgeBase.vue'
 import ChatAgent from '../views/user/ChatAgent.vue'
@@ -31,6 +32,12 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword,
+    meta: { title: '修改密码' }
   },
   {
     path: '/user',
@@ -101,6 +108,12 @@ const routes = [
         meta: { title: '反馈处理' }
       },
       {
+        path: 'password-reset',
+        name: 'PasswordResetManage',
+        component: () => import('../views/admin/PasswordResetManage.vue'),
+        meta: { title: '密码重置管理' }
+      },
+      {
         path: 'logs',
         name: 'ChatLogManage',
         component: ChatLogManage,
@@ -136,6 +149,15 @@ router.beforeEach((to, _from, next) => {
 
   if (to.path === '/login' && token) {
     next(role === 'admin' ? '/admin/home' : '/user/home')
+    return
+  }
+
+  if (to.path === '/change-password') {
+    if (!token) {
+      next('/login')
+      return
+    }
+    next()
     return
   }
 

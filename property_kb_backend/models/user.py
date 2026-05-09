@@ -13,6 +13,7 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="user")
     nickname = db.Column(db.String(80), nullable=False)
     status = db.Column(db.String(20), nullable=False, default="启用")
+    must_change_password = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(
         db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
@@ -32,5 +33,6 @@ class User(db.Model):
             "updatedAt": self.updated_at.strftime("%Y-%m-%d %H:%M:%S")
             if self.updated_at
             else None,
+            "mustChangePassword": self.must_change_password,
         }
 

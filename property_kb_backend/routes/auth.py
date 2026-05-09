@@ -1,11 +1,12 @@
 import re
 
 from flask import Blueprint, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from extensions.db import db
+from models.password_reset_request import PasswordResetRequest
 from models.user import User
 from utils.auth import get_current_user, login_required_user
 from utils.response import fail, success
@@ -105,6 +106,7 @@ def login():
             "username": user.username,
             "nickname": user.nickname,
             "email": user.email,
+            "mustChangePassword": user.must_change_password,
         },
         "登录成功",
     )
@@ -124,3 +126,101 @@ def profile():
         },
         "查询成功",
     )
+
+
+@auth_bp.post("/password-reset/request")
+def request_password_reset():
+    payload = request.get_json(silent=True) or {}
+    username = (payload.get("username") or "").strip()
+
+    if not username:
+        return fail("用户名或邮箱不能为空")
+
+    user = User.query.filter(
+        or_(User.username == username, User.email == username)
+    ).first()
+    if not user:
+        return fail("用户不存在")
+
+    existing = PasswordResetRequest.query.filter_by(
+        user_id=user.id, status="待处理"
+    ).first()
+    if existing:
+        return fail("已存在待处理的密码重置请求，请等待管理员处理")
+
+    req = PasswordResetRequest(
+        user_id=user.id,
+        username=user.username,
+        email=user.email,
+        status="待处理",
+    )
+    db.session.add(req)
+    db.session.commit()
+
+    return success(None, "密码重置请求已提交，请等待管理员处理")
+
+
+@auth_bp.get("/password-reset/status")
+def password_reset_status():
+    username = (request.args.get("username") or "").strip()
+
+    if not username:
+        return fail("用户名或邮箱不能为空")
+
+    user = User.query.filter(
+        or_(User.username == username, User.email == username)
+    ).first()
+    if not user:
+        return fail("用户不存在")
+
+    processed = PasswordResetRequest.query.filter_by(
+        user_id=user.id, status="已处理"
+    ).filter(
+        PasswordResetRequest.temp_password_plain.isnot(None)
+    ).order_by(
+        PasswordResetRequest.handled_at.desc()
+    ).first()
+
+    if processed:
+        return success(
+            {"status": "已处理", "tempPassword": processed.temp_password_plain},
+            "查询成功",
+        )
+
+    pending = PasswordResetRequest.query.filter_by(
+        user_id=user.id, status="待处理"
+    ).first()
+    if pending:
+        return success({"status": "待处理"}, "查询成功")
+
+    return success({"status": "无请求"}, "查询成功")
+
+
+@auth_bp.post("/change-password")
+@jwt_required()
+def change_password():
+    user = get_current_user()
+    if not user or user.status != "启用":
+        return fail("请先登录", 401)
+
+    payload = request.get_json(silent=True) or {}
+    new_password = payload.get("newPassword") or ""
+
+    if not new_password:
+        return fail("新密码不能为空")
+    if len(new_password) < 6:
+        return fail("密码长度不能少于 6 位")
+    if not is_valid_password(new_password):
+        return fail("密码必须同时包含字母和数字")
+
+    user.password_hash = generate_password_hash(new_password)
+    user.must_change_password = False
+
+    PasswordResetRequest.query.filter_by(
+        user_id=user.id, status="已处理"
+    ).filter(
+        PasswordResetRequest.temp_password_plain.isnot(None)
+    ).update({"temp_password_plain": None})
+
+    db.session.commit()
+    return success(None, "密码修改成功")

@@ -61,6 +61,7 @@ const menus = [
   { label: '知识库维护', path: '/admin/qa', icon: 'Collection' },
   { label: '分类管理', path: '/admin/category', icon: 'FolderOpened' },
   { label: '反馈处理', path: '/admin/feedback', icon: 'ChatLineRound' },
+  { label: '密码重置', path: '/admin/password-reset', icon: 'Key' },
   { label: '咨询日志', path: '/admin/logs', icon: 'Tickets' },
   { label: '数据看板', path: '/admin/dashboard', icon: 'DataAnalysis' },
   { label: '向量库维护', path: '/admin/vector', icon: 'Connection' }

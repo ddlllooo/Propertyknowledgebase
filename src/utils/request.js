@@ -52,6 +52,10 @@ request.interceptors.response.use(
     const result = response.data
     if (result?.code && result.code !== 200) {
       ElMessage.error(result.message || '请求失败')
+      if (result.code === 423) {
+        window.location.href = '/change-password'
+        return Promise.reject(result)
+      }
       if (result.code === 401 || result.code === 403) {
         redirectToLogin()
       }
@@ -66,6 +70,10 @@ request.interceptors.response.use(
     const status = error?.response?.status
     const message = error?.response?.data?.message || error.message || '请求失败'
     ElMessage.error(message)
+    if (status === 423) {
+      window.location.href = '/change-password'
+      return Promise.reject(error)
+    }
     if (status === 401 || status === 403) {
       redirectToLogin()
     }
