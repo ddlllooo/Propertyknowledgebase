@@ -29,9 +29,9 @@ def load_env_files():
 load_env_files()
 
 
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+BIGMODEL_API_KEY = os.getenv("BIGMODEL_API_KEY", "")
+BIGMODEL_BASE_URL = os.getenv("BIGMODEL_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
+BIGMODEL_MODEL = os.getenv("BIGMODEL_MODEL", "GLM-4.5-Air")
 
 EMBEDDING_MODEL_NAME = os.getenv(
     "EMBEDDING_MODEL_NAME",

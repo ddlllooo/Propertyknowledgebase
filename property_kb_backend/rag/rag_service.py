@@ -6,7 +6,7 @@ from models.chat_log import ChatLog
 from models.qa import QaKnowledge
 from rag.config import RAG_MAX_DISTANCE_THRESHOLD, RAG_TOP_K
 from rag.faiss_store import FaissIndexError, search_similar_docs
-from rag.llm_client import DeepSeekClientError, call_deepseek
+from rag.llm_client import LLMClientError, call_llm
 from rag.prompt import FALLBACK_ANSWER, build_prompt
 
 
@@ -101,13 +101,13 @@ def rag_answer(question, current_user):
     metadata = top_doc.metadata or {}
 
     llm_used = True
-    generation_mode = "DeepSeek 生成"
+    generation_mode = "质谱大模型生成"
     llm_error = ""
     try:
-        answer = call_deepseek(prompt)
+        answer = call_llm(prompt)
         if not answer:
-            raise DeepSeekClientError("DeepSeek 返回内容为空")
-    except DeepSeekClientError as exc:
+            raise LLMClientError("质谱大模型返回内容为空")
+    except LLMClientError as exc:
         answer = metadata.get("answer") or FALLBACK_ANSWER
         llm_used = False
         generation_mode = "知识库"
@@ -145,5 +145,5 @@ def rag_answer(question, current_user):
         "llmUsed": llm_used,
         "answerSource": "智能客服",
         "generationMode": generation_mode,
-        "ragTrace": "DeepSeek 调用成功" if llm_used else llm_error,
+        "ragTrace": "质谱大模型调用成功" if llm_used else llm_error,
     }

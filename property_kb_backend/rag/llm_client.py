@@ -1,14 +1,14 @@
 import os
 
 from rag.config import (
-    DEEPSEEK_API_KEY,
-    DEEPSEEK_BASE_URL,
-    DEEPSEEK_MODEL,
+    BIGMODEL_API_KEY,
+    BIGMODEL_BASE_URL,
+    BIGMODEL_MODEL,
     load_env_files,
 )
 
 
-class DeepSeekClientError(RuntimeError):
+class LLMClientError(RuntimeError):
     pass
 
 
@@ -16,12 +16,12 @@ _client = None
 _client_config = None
 
 
-def get_deepseek_settings():
+def get_llm_settings():
     load_env_files()
     return {
-        "api_key": os.getenv("DEEPSEEK_API_KEY", DEEPSEEK_API_KEY).strip(),
-        "base_url": os.getenv("DEEPSEEK_BASE_URL", DEEPSEEK_BASE_URL).strip(),
-        "model": os.getenv("DEEPSEEK_MODEL", DEEPSEEK_MODEL).strip(),
+        "api_key": os.getenv("BIGMODEL_API_KEY", BIGMODEL_API_KEY).strip(),
+        "base_url": os.getenv("BIGMODEL_BASE_URL", BIGMODEL_BASE_URL).strip(),
+        "model": os.getenv("BIGMODEL_MODEL", BIGMODEL_MODEL).strip(),
     }
 
 
@@ -29,7 +29,7 @@ def is_missing_api_key(api_key):
     return not api_key or api_key in {"sk-xxxx", "sk-xxx", "your-api-key"}
 
 
-def get_deepseek_client(settings):
+def get_llm_client(settings):
     global _client, _client_config
     client_config = (settings["api_key"], settings["base_url"])
     if _client is None or _client_config != client_config:
@@ -43,13 +43,13 @@ def get_deepseek_client(settings):
     return _client
 
 
-def call_deepseek(prompt):
-    settings = get_deepseek_settings()
+def call_llm(prompt):
+    settings = get_llm_settings()
     if is_missing_api_key(settings["api_key"]):
-        raise DeepSeekClientError("DEEPSEEK_API_KEY 未配置，请在 property_kb_backend/.env 中配置真实 Key")
+        raise LLMClientError("BIGMODEL_API_KEY 未配置，请在 property_kb_backend/.env 中配置真实 Key")
 
     try:
-        client = get_deepseek_client(settings)
+        client = get_llm_client(settings)
         response = client.chat.completions.create(
             model=settings["model"],
             messages=[
@@ -64,17 +64,18 @@ def call_deepseek(prompt):
             ],
             temperature=0.2,
             max_tokens=500,
+            thinking={"type": "disable"},
         )
         return response.choices[0].message.content
     except Exception as exc:
         detail = str(exc)
         if settings["api_key"]:
             detail = detail.replace(settings["api_key"], "***")
-        raise DeepSeekClientError(f"DeepSeek 调用失败：{exc.__class__.__name__} {detail[:240]}") from exc
+        raise LLMClientError(f"质谱大模型调用失败：{exc.__class__.__name__} {detail[:240]}") from exc
 
 
-def get_deepseek_health():
-    settings = get_deepseek_settings()
+def get_llm_health():
+    settings = get_llm_settings()
     api_key = settings["api_key"]
     return {
         "configured": not is_missing_api_key(api_key),

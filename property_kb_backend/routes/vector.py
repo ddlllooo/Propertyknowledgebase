@@ -5,7 +5,7 @@ from flask import Blueprint
 from models.qa import QaKnowledge
 from rag.config import EMBEDDING_MODEL_NAME, FAISS_INDEX_PATH
 from rag.faiss_store import FaissIndexError, build_faiss_index, faiss_index_exists
-from rag.llm_client import get_deepseek_health
+from rag.llm_client import get_llm_health
 from utils.auth import admin_required
 from utils.response import fail, success
 
@@ -55,7 +55,7 @@ def get_vector_status():
         "lastBuildTime": format_time(get_index_build_time()),
         "vectorStore": VECTOR_STORE_NAME,
         "embeddingModel": EMBEDDING_MODEL_NAME,
-        "llmStatus": get_deepseek_health(),
+        "llmStatus": get_llm_health(),
         "ragStatus": {
             "indexStatus": "已同步" if exists and pending_sync_count == 0 else "待同步",
             "chunkCount": chunk_count,
