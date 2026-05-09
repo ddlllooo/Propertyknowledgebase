@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -L -o E:/Propertyknowledgebase/public/images/bg-user-home.jpg \"https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=80\")"
+    ]
+  }
+}

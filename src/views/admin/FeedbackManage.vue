@@ -398,7 +398,7 @@ onMounted(async () => {
   color: #fff;
   background:
     linear-gradient(125deg, rgba(17, 120, 255, 0.96), rgba(19, 190, 167, 0.86)),
-    url("https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=80")
+    url("/images/bg-feedback-1400.jpg")
       center/cover;
   background-blend-mode: multiply;
   box-shadow: 0 22px 52px rgba(16, 108, 191, 0.2);

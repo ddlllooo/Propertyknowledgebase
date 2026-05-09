@@ -380,7 +380,7 @@ const copyTempPassword = () => {
   color: #fff;
   background:
     linear-gradient(135deg, rgba(10, 103, 230, 0.92), rgba(18, 184, 166, 0.86)),
-    url("https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1400&q=80")
+    url("/images/bg-login.jpg")
       center/cover;
   background-blend-mode: multiply;
   box-shadow: 0 26px 70px rgba(17, 98, 191, 0.26);

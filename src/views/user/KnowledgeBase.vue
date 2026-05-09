@@ -182,7 +182,7 @@ const sendHelpful = async (type) => {
   color: #fff;
   background:
     linear-gradient(125deg, rgba(17, 120, 255, 0.94), rgba(19, 190, 167, 0.84)),
-    url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=80")
+    url("/images/bg-building.jpg")
       center/cover;
   background-blend-mode: multiply;
   box-shadow: 0 22px 52px rgba(17, 105, 205, 0.2);

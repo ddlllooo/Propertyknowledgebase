@@ -12,3 +12,4 @@ property_kb_backend/.venv/
 property_kb_backend/tmp*/
 property_kb_backend/storage/faiss_index/
 property_kb_backend/storage/hf_cache/
+*.stackdump
