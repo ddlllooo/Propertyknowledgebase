@@ -51,6 +51,8 @@
             resize="none"
             :disabled="sending"
             placeholder="请输入您的物业服务问题"
+            maxlength="200"
+            show-word-limit
             @keydown="onTextareaKeydown"
           />
           <el-button type="primary" :icon="Promotion" :loading="sending" @click="sendMessage">发送</el-button>
@@ -165,10 +167,16 @@ watch(
   { deep: true }
 )
 
+const QUESTION_MAX_LENGTH = 200
+
 const sendMessage = async (presetQuestion) => {
   const question = (presetQuestion || inputValue.value).trim()
   if (!question) {
     ElMessage.warning('请输入咨询问题')
+    return
+  }
+  if (question.length > QUESTION_MAX_LENGTH) {
+    ElMessage.warning(`问题长度不能超过 ${QUESTION_MAX_LENGTH} 个字符`)
     return
   }
 

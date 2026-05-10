@@ -13,3 +13,5 @@ faiss-cpu
 openai
 python-dotenv
 cryptography
+Flask-Limiter
+captcha

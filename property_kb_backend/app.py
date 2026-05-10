@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 
 from config import Config
 from extensions.db import db
+from extensions.limiter import limiter
 from utils.response import fail, success
 
 
@@ -44,6 +45,7 @@ def create_app():
 
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
 
     from routes.auth import auth_bp
     from routes.qa import qa_bp

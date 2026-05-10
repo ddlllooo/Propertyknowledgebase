@@ -20,7 +20,7 @@
     <section class="login-card">
       <div class="card-head">
         <span>登录</span>
-        <small>普通用户</small>
+        <small>欢迎使用</small>
       </div>
       <el-form :model="form" :rules="rules" ref="loginFormRef" size="large" @keyup.enter="handleLogin">
         <el-form-item prop="username">
@@ -73,6 +73,25 @@
             show-password
             :prefix-icon="Lock"
           />
+        </el-form-item>
+        <el-form-item label="验证码" prop="captchaCode">
+          <div class="captcha-row">
+            <el-input
+              v-model="registerForm.captchaCode"
+              placeholder="请输入验证码"
+              :prefix-icon="Key"
+              maxlength="4"
+            />
+            <img
+              v-if="captchaImage"
+              :src="captchaImage"
+              alt="验证码"
+              class="captcha-img"
+              title="点击刷新验证码"
+              @click="refreshCaptcha"
+            />
+            <div v-else class="captcha-img captcha-placeholder" @click="refreshCaptcha">加载中</div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -142,8 +161,8 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Connection, Lock, Message, User } from '@element-plus/icons-vue'
-import { login, register, requestPasswordReset, getPasswordResetStatus } from '../api/auth'
+import { Connection, Key, Lock, Message, User } from '@element-plus/icons-vue'
+import { login, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
 
 const router = useRouter()
 const loginFormRef = ref()
@@ -156,6 +175,7 @@ const resetLoading = ref(false)
 const resetStep = ref(1)
 const resetUsername = ref('')
 const resetResult = ref({})
+const captchaImage = ref('')
 
 const form = reactive({
   username: 'user',
@@ -166,7 +186,8 @@ const registerForm = reactive({
   name: '',
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  captchaCode: ''
 })
 
 const validatePassword = (_rule, value, callback) => {
@@ -209,10 +230,15 @@ const registerRules = {
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change'] }
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change'] },
+    { max: 100, message: '邮箱长度不能超过 100 个字符', trigger: 'blur' }
   ],
   password: [{ validator: validatePassword, trigger: 'blur' }],
-  confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }]
+  confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }],
+  captchaCode: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 4, message: '验证码为 4 位数字', trigger: 'blur' }
+  ]
 }
 
 const features = [
@@ -270,8 +296,18 @@ const handleLogin = async () => {
   }
 }
 
+const refreshCaptcha = async () => {
+  try {
+    const res = await getCaptcha()
+    captchaImage.value = res?.data?.image || ''
+  } catch {
+    captchaImage.value = ''
+  }
+}
+
 const openRegisterDialog = () => {
   registerVisible.value = true
+  refreshCaptcha()
 }
 
 const resetRegisterForm = () => {
@@ -280,8 +316,10 @@ const resetRegisterForm = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    captchaCode: ''
   })
+  captchaImage.value = ''
 }
 
 const handleRegister = async () => {
@@ -292,7 +330,8 @@ const handleRegister = async () => {
       name: registerForm.name,
       email: registerForm.email,
       password: registerForm.password,
-      confirmPassword: registerForm.confirmPassword
+      confirmPassword: registerForm.confirmPassword,
+      captchaCode: registerForm.captchaCode
     })
     ElMessage.success('注册成功，请登录')
     form.username = registerForm.name
@@ -519,6 +558,32 @@ const copyTempPassword = () => {
   color: #172b4d;
   letter-spacing: 2px;
   font-family: monospace;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-row .el-input {
+  flex: 1;
+}
+
+.captcha-img {
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid #dcdfe6;
+}
+
+.captcha-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  color: #909399;
+  font-size: 13px;
 }
 
 @media (max-width: 980px) {

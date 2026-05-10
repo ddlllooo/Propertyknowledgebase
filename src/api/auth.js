@@ -12,3 +12,5 @@ export const getPasswordResetStatus = (params) => request.get('/auth/password-re
 
 export const changePassword = (data) => request.post('/auth/change-password', data)
 
+export const getCaptcha = () => request.get('/auth/captcha', { _noCache: true })
+
