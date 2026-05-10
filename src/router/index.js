@@ -15,6 +15,7 @@ import FeedbackManage from '../views/admin/FeedbackManage.vue'
 import ChatLogManage from '../views/admin/ChatLogManage.vue'
 import Dashboard from '../views/admin/Dashboard.vue'
 import VectorManage from '../views/admin/VectorManage.vue'
+import UserManage from '../views/admin/UserManage.vue'
 
 const routes = [
   {
@@ -112,6 +113,12 @@ const routes = [
         name: 'PasswordResetManage',
         component: () => import('../views/admin/PasswordResetManage.vue'),
         meta: { title: '密码重置管理' }
+      },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: UserManage,
+        meta: { title: '用户管理' }
       },
       {
         path: 'logs',

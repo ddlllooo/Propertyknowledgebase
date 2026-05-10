@@ -1,5 +1,3 @@
-import os
-
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -33,9 +31,11 @@ def create_app():
     app.config.from_object(Config)
     app.json.ensure_ascii = False
 
-    cors_origins = os.environ.get(
-        "CORS_ORIGINS", "http://localhost:5173"
-    ).split(",")
+    cors_origins = [
+        o.strip()
+        for o in Config.CORS_ORIGINS.split(",")
+        if o.strip()
+    ]
     CORS(
         app,
         resources={r"/api/*": {"origins": cors_origins}},
@@ -53,6 +53,7 @@ def create_app():
     from routes.admin_feedback import admin_feedback_bp
     from routes.admin_password_reset import admin_password_reset_bp
     from routes.admin_qa import admin_qa_bp
+    from routes.admin_user import admin_user_bp
     from routes.chat import chat_bp
     from routes.feedback import feedback_bp
     from routes.vector import vector_bp
@@ -65,6 +66,7 @@ def create_app():
     app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
     app.register_blueprint(admin_feedback_bp, url_prefix="/api/admin/feedback")
     app.register_blueprint(admin_password_reset_bp, url_prefix="/api/admin/password-reset")
+    app.register_blueprint(admin_user_bp, url_prefix="/api/admin/user")
     app.register_blueprint(admin_chat_logs_bp, url_prefix="/api/admin")
     app.register_blueprint(admin_dashboard_bp, url_prefix="/api/admin/dashboard")
     app.register_blueprint(vector_bp, url_prefix="/api/admin/vector")

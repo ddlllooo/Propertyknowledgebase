@@ -5,24 +5,17 @@
       <p>处理用户发起的密码重置请求，生成临时密码</p>
     </div>
 
-    <div class="stat-grid">
-      <div class="stat-card">
-        <span class="stat-num">{{ stats.total }}</span>
-        <span class="stat-label">全部请求</span>
-      </div>
-      <div class="stat-card pending">
-        <span class="stat-num">{{ stats.pending }}</span>
-        <span class="stat-label">待处理</span>
-      </div>
-      <div class="stat-card processed">
-        <span class="stat-num">{{ stats.processed }}</span>
-        <span class="stat-label">已处理</span>
-      </div>
-      <div class="stat-card ignored">
-        <span class="stat-num">{{ stats.ignored }}</span>
-        <span class="stat-label">已忽略</span>
-      </div>
-    </div>
+    <section class="stat-grid">
+      <article v-for="item in statItems" :key="item.label" class="stat-card">
+        <div class="stat-icon" :style="{ background: item.color }">
+          <el-icon><component :is="item.icon" /></el-icon>
+        </div>
+        <div>
+          <strong>{{ item.value }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
+      </article>
+    </section>
 
     <div class="filter-bar">
       <el-select v-model="filterStatus" placeholder="状态筛选" clearable size="large" style="width: 140px;">
@@ -87,7 +80,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Document, Clock, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import { getPasswordResetList, adminResetPassword, ignorePasswordReset } from '../../api/adminPasswordReset'
 
 const list = ref([])
@@ -103,6 +96,33 @@ const stats = computed(() => {
   const ignored = list.value.filter((r) => r.status === '已忽略').length
   return { total, pending, processed, ignored }
 })
+
+const statItems = computed(() => [
+  {
+    label: '全部请求',
+    value: stats.value.total,
+    icon: 'Document',
+    color: 'linear-gradient(135deg, #1178ff, #56a9ff)'
+  },
+  {
+    label: '待处理',
+    value: stats.value.pending,
+    icon: 'Clock',
+    color: 'linear-gradient(135deg, #e6a23c, #f0c78a)'
+  },
+  {
+    label: '已处理',
+    value: stats.value.processed,
+    icon: 'CircleCheck',
+    color: 'linear-gradient(135deg, #20b486, #74d3b4)'
+  },
+  {
+    label: '已忽略',
+    value: stats.value.ignored,
+    icon: 'CircleClose',
+    color: 'linear-gradient(135deg, #909399, #b8bcc4)'
+  }
+])
 
 const filteredList = computed(() => {
   let result = list.value
@@ -186,15 +206,22 @@ onMounted(() => {
 
 <style scoped>
 .password-reset-manage {
-  max-width: 960px;
+  display: grid;
+  gap: 22px;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .title-panel {
-  padding: 28px 32px;
-  border-radius: 20px;
+  padding: 32px;
+  border-radius: 26px;
   color: #fff;
-  background: linear-gradient(135deg, #1178ff, #13bea7);
-  margin-bottom: 24px;
+  background:
+    linear-gradient(125deg, rgba(17, 120, 255, 0.96), rgba(19, 190, 167, 0.86)),
+    url("/images/bg-dashboard.jpg")
+      center/cover;
+  background-blend-mode: multiply;
+  box-shadow: 0 22px 52px rgba(16, 108, 191, 0.2);
 }
 
 .title-panel h2 {
@@ -210,42 +237,56 @@ onMounted(() => {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
 }
 
 .stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 116px;
   padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(211, 226, 238, 0.86);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(21, 56, 98, 0.08);
+}
+
+.stat-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
   border-radius: 16px;
-  background: #fff;
-  text-align: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  color: #fff;
+  font-size: 22px;
 }
 
-.stat-num {
+.stat-card strong {
   display: block;
-  font-size: 28px;
-  font-weight: 800;
   color: #172b4d;
+  font-size: 26px;
+  line-height: 1.1;
 }
 
-.stat-label {
+.stat-card span {
   display: block;
-  margin-top: 4px;
-  color: #7b8fa6;
+  margin-top: 7px;
+  color: #6b7c93;
   font-size: 13px;
 }
-
-.stat-card.pending .stat-num { color: #e6a23c; }
-.stat-card.processed .stat-num { color: #67c23a; }
-.stat-card.ignored .stat-num { color: #909399; }
 
 .filter-bar {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
   flex-wrap: wrap;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(211, 226, 238, 0.86);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(21, 56, 98, 0.08);
 }
 
 .request-list {
@@ -256,9 +297,10 @@ onMounted(() => {
 
 .request-card {
   padding: 20px 24px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  border: 1px solid rgba(211, 226, 238, 0.86);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(21, 56, 98, 0.08);
 }
 
 .card-header {

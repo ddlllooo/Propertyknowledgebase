@@ -139,3 +139,41 @@ def feedback_to_knowledge(feedback_id):
     db.session.commit()
 
     return success(qa.to_dict(), "已补充至知识库")
+
+
+@admin_feedback_bp.delete("/delete/<int:feedback_id>")
+@admin_required
+def delete_feedback(feedback_id):
+    feedback = db.session.get(Feedback, feedback_id)
+    if not feedback:
+        return fail("反馈不存在", 404)
+
+    db.session.delete(feedback)
+    db.session.commit()
+    return success(message="删除成功")
+
+
+@admin_feedback_bp.post("/batch-status")
+@admin_required
+def batch_update_feedback_status():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids")
+    status = (payload.get("status") or "").strip()
+
+    valid_statuses = {"待处理", "处理中", "已处理", "已忽略"}
+    if not isinstance(ids, list) or not ids:
+        return fail("请提供反馈ID列表")
+    if status not in valid_statuses:
+        return fail("状态值无效")
+
+    current_user = get_current_user()
+    count = Feedback.query.filter(Feedback.id.in_(ids)).update(
+        {
+            Feedback.status: status,
+            Feedback.handled_by: current_user.id,
+            Feedback.handled_at: datetime.now(),
+        },
+        synchronize_session=False,
+    )
+    db.session.commit()
+    return success({"updatedCount": count}, f"已更新 {count} 条反馈状态")

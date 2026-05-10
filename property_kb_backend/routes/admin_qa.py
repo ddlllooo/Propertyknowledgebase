@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, request
 from sqlalchemy import or_
 
@@ -82,6 +84,30 @@ def list_qa():
     )
 
 
+@admin_qa_bp.get("/stats")
+@admin_required
+def qa_stats():
+    today = date.today().isoformat()
+    total = QaKnowledge.query.count()
+    published = QaKnowledge.query.filter(QaKnowledge.status == "已发布").count()
+    disabled = QaKnowledge.query.filter(QaKnowledge.status == "已停用").count()
+    draft = QaKnowledge.query.filter(QaKnowledge.status == "草稿").count()
+    pending = QaKnowledge.query.filter(QaKnowledge.status == "待审核").count()
+    today_updated = QaKnowledge.query.filter(QaKnowledge.updated_at >= today).count()
+
+    return success(
+        {
+            "total": total,
+            "published": published,
+            "disabled": disabled,
+            "draft": draft,
+            "pending": pending,
+            "todayUpdated": today_updated,
+        },
+        "查询成功",
+    )
+
+
 @admin_qa_bp.post("/batch-create")
 @admin_required
 def batch_create_qa():
@@ -93,6 +119,10 @@ def batch_create_qa():
     current_user = get_current_user()
     created = []
     errors = []
+    existing_questions = set(
+        row[0]
+        for row in db.session.query(QaKnowledge.question).all()
+    )
 
     for idx, item_data in enumerate(items):
         question = (item_data.get("question") or "").strip()
@@ -112,6 +142,10 @@ def batch_create_qa():
             errors.append({"row": idx + 1, "message": "分类不能为空"})
             continue
 
+        if question in existing_questions:
+            errors.append({"row": idx + 1, "message": f"问题已存在：{question[:30]}"})
+            continue
+
         ensure_category(category, category_description)
         item = QaKnowledge(
             question=question,
@@ -125,6 +159,7 @@ def batch_create_qa():
         )
         db.session.add(item)
         created.append(item)
+        existing_questions.add(question)
         refresh_category_question_count(category)
 
     if created:
@@ -156,6 +191,10 @@ def create_qa():
         return fail("问题不能为空")
     if not answer:
         return fail("答案不能为空")
+
+    existing = QaKnowledge.query.filter(QaKnowledge.question == question).first()
+    if existing:
+        return fail("该问题已存在，请勿重复创建")
 
     current_user = get_current_user()
     chat_log = db.session.get(ChatLog, chat_log_id) if chat_log_id else None
@@ -243,11 +282,79 @@ def delete_qa(qa_id):
     if not item:
         return fail("问答不存在", 404)
 
-    current_user = get_current_user()
-    item.status = "已停用"
-    item.updated_by = current_user.id
+    hard = (request.args.get("hard") or "").lower() in ("true", "1", "yes")
+    category = item.category
 
-    refresh_category_question_count(item.category)
+    if hard:
+        db.session.delete(item)
+        db.session.commit()
+        return success(message="已永久删除")
+    else:
+        current_user = get_current_user()
+        item.status = "已停用"
+        item.updated_by = current_user.id
+        refresh_category_question_count(category)
+        db.session.commit()
+        return success(item.to_dict(), "删除成功")
+
+
+@admin_qa_bp.post("/batch-delete")
+@admin_required
+def batch_delete_qa():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids")
+    hard = bool(payload.get("hard"))
+
+    if not isinstance(ids, list) or not ids:
+        return fail("请提供问答ID列表")
+
+    items = QaKnowledge.query.filter(QaKnowledge.id.in_(ids)).all()
+    if not items:
+        return fail("未找到指定问答")
+
+    categories = set()
+    if hard:
+        for item in items:
+            categories.add(item.category)
+            db.session.delete(item)
+    else:
+        current_user = get_current_user()
+        for item in items:
+            item.status = "已停用"
+            item.updated_by = current_user.id
+            categories.add(item.category)
+
     db.session.commit()
+    for cat in categories:
+        refresh_category_question_count(cat)
 
-    return success(item.to_dict(), "删除成功")
+    action = "永久删除" if hard else "停用"
+    return success({"deletedCount": len(items)}, f"已{action} {len(items)} 条问答")
+
+
+@admin_qa_bp.post("/batch-status")
+@admin_required
+def batch_update_qa_status():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids")
+    status = (payload.get("status") or "").strip()
+
+    valid_statuses = {"已发布", "草稿", "待审核", "已停用"}
+    if not isinstance(ids, list) or not ids:
+        return fail("请提供问答ID列表")
+    if status not in valid_statuses:
+        return fail("状态值无效")
+
+    current_user = get_current_user()
+    items = QaKnowledge.query.filter(QaKnowledge.id.in_(ids)).all()
+    categories = set()
+    for item in items:
+        categories.add(item.category)
+        item.status = status
+        item.updated_by = current_user.id
+
+    db.session.commit()
+    for cat in categories:
+        refresh_category_question_count(cat)
+
+    return success({"updatedCount": len(items)}, f"已更新 {len(items)} 条问答状态")

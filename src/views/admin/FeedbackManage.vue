@@ -61,6 +61,7 @@
             <el-button type="success" text @click="openKnowledgeDialog(item)">加入知识库</el-button>
             <el-button type="warning" text @click="openProcessDialog(item)">标记已处理</el-button>
             <el-button type="info" text @click="ignoreFeedback(item)">忽略</el-button>
+            <el-button type="danger" text @click="handleDeleteFeedback(item)">删除</el-button>
           </div>
         </div>
       </article>
@@ -177,7 +178,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight, Search } from '@element-plus/icons-vue'
 import { getCategoryList } from '../../api/adminCategory'
-import { feedbackToKnowledge, getFeedbackList, updateFeedbackStatus } from '../../api/adminFeedback'
+import { deleteFeedback, feedbackToKnowledge, getFeedbackList, updateFeedbackStatus } from '../../api/adminFeedback'
 import { getAdminQaList } from '../../api/adminQa'
 
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
@@ -315,6 +316,17 @@ const markProcessedFromDetail = async () => {
   await refreshFeedback()
   detailVisible.value = false
   ElMessage.success('处理说明已保存')
+}
+
+const handleDeleteFeedback = async (item) => {
+  await ElMessageBox.confirm(`确认删除这条反馈吗？`, '删除确认', {
+    type: 'warning',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  })
+  await deleteFeedback(item.id)
+  await refreshFeedback()
+  ElMessage.success('反馈已删除')
 }
 
 const ignoreFeedback = async (item) => {

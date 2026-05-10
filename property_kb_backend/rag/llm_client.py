@@ -1,10 +1,7 @@
-import os
-
 from rag.config import (
     BIGMODEL_API_KEY,
     BIGMODEL_BASE_URL,
     BIGMODEL_MODEL,
-    load_env_files,
 )
 
 
@@ -17,11 +14,10 @@ _client_config = None
 
 
 def get_llm_settings():
-    load_env_files()
     return {
-        "api_key": os.getenv("BIGMODEL_API_KEY", BIGMODEL_API_KEY).strip(),
-        "base_url": os.getenv("BIGMODEL_BASE_URL", BIGMODEL_BASE_URL).strip(),
-        "model": os.getenv("BIGMODEL_MODEL", BIGMODEL_MODEL).strip(),
+        "api_key": BIGMODEL_API_KEY.strip(),
+        "base_url": BIGMODEL_BASE_URL.strip(),
+        "model": BIGMODEL_MODEL.strip(),
     }
 
 

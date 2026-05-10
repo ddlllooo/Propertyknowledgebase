@@ -28,6 +28,7 @@
           clearable
           placeholder="搜索标准问题、答案、关键词"
           :prefix-icon="Search"
+          @input="onKeywordInput"
         />
         <el-select v-model="filters.category" placeholder="分类筛选">
           <el-option label="全部分类" value="全部" />
@@ -42,6 +43,7 @@
       <div class="action-row">
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增问答</el-button>
         <el-button :icon="Upload" @click="handleImport">批量导入</el-button>
+        <el-button type="danger" :disabled="!selectedQaIds.length" @click="batchDeleteQa">批量删除</el-button>
         <el-button type="success" :icon="Refresh" :loading="rebuildLoading" @click="handleRebuildVector">
           重建向量库
         </el-button>
@@ -49,7 +51,8 @@
     </section>
 
     <section class="table-card">
-      <el-table :data="filteredQaList" row-key="id" stripe>
+      <el-table :data="qaRecords" row-key="id" stripe @selection-change="onQaSelectionChange">
+        <el-table-column type="selection" width="50" />
         <el-table-column prop="id" label="编号" width="82" />
         <el-table-column prop="question" label="标准问题" min-width="240">
           <template #default="{ row }">
@@ -93,6 +96,17 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="fetchQaRecords"
+          @current-change="fetchQaRecords"
+        />
+      </div>
     </section>
 
     <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增问答' : '编辑问答'" width="680px">
@@ -215,10 +229,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
-import { batchCreateQa, createQa, deleteQa, getAdminQaList, updateQa } from '../../api/adminQa'
+import { batchCreateQa, batchDeleteQa as apiBatchDeleteQa, createQa, deleteQa, getAdminQaList, getAdminQaStats, updateQa } from '../../api/adminQa'
 import { getCategoryList } from '../../api/adminCategory'
 import { rebuildVector } from '../../api/vector'
 
@@ -235,14 +249,19 @@ const importLoading = ref(false)
 const fileInputRef = ref()
 
 const qaRecords = ref([])
+const selectedQaIds = ref([])
+const currentPage = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 
-const categoryOptions = computed(() => {
-  const names = [
-    ...categoryRecords.value.map((item) => item.name),
-    ...qaRecords.value.map((item) => item.category)
-  ]
-  return [...new Set(names.map((item) => String(item || '').trim()).filter(Boolean))]
+const qaStats = reactive({
+  total: 0,
+  published: 0,
+  disabled: 0,
+  todayUpdated: 0
 })
+
+const categoryOptions = computed(() => categoryRecords.value.map((item) => item.name))
 
 const filters = reactive({
   keyword: '',
@@ -277,45 +296,56 @@ const rules = {
 const stats = computed(() => [
   {
     label: '总问答数',
-    value: qaRecords.value.length,
+    value: qaStats.total,
     icon: 'Collection',
     color: 'linear-gradient(135deg, #1178ff, #56a9ff)'
   },
   {
     label: '启用问答',
-    value: qaRecords.value.filter((item) => item.status === '已发布').length,
+    value: qaStats.published,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
   {
     label: '停用问答',
-    value: qaRecords.value.filter((item) => item.status === '已停用').length,
+    value: qaStats.disabled,
     icon: 'CircleClose',
     color: 'linear-gradient(135deg, #7c8da5, #a5b5c6)'
   },
   {
     label: '今日更新',
-    value: qaRecords.value.filter((item) => item.updatedAt === new Date().toISOString().slice(0, 10)).length,
+    value: qaStats.todayUpdated,
     icon: 'Refresh',
     color: 'linear-gradient(135deg, #ffb020, #ffd36e)'
   }
 ])
 
-const keywordOptions = computed(() => {
-  return [...new Set(qaRecords.value.flatMap((item) => item.keywords))]
-})
+const keywordOptions = ref([])
 
-const filteredQaList = computed(() => {
-  const keyword = filters.keyword.trim().toLowerCase()
+let keywordTimer = null
+const onKeywordInput = () => {
+  clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => {
+    currentPage.value = 1
+    fetchQaRecords()
+  }, 400)
+}
 
-  return qaRecords.value.filter((item) => {
-    const text = [item.question, item.answer, item.category, item.source, ...item.keywords].join(' ').toLowerCase()
-    const keywordMatched = !keyword || text.includes(keyword)
-    const categoryMatched = filters.category === '全部' || item.category === filters.category
-    const statusMatched = filters.status === '全部' || item.status === filters.status
-    return keywordMatched && categoryMatched && statusMatched
-  })
-})
+watch(
+  () => [filters.category, filters.status],
+  () => {
+    currentPage.value = 1
+    fetchQaRecords()
+  }
+)
+
+const buildQueryParams = () => {
+  const params = { page: currentPage.value, pageSize: pageSize.value }
+  if (filters.keyword.trim()) params.keyword = filters.keyword.trim()
+  if (filters.category !== '全部') params.category = filters.category
+  if (filters.status !== '全部') params.status = filters.status
+  return params
+}
 
 const assignForm = (data) => {
   Object.assign(qaForm, {
@@ -338,11 +368,31 @@ const fetchCategories = async () => {
 }
 
 const fetchQaRecords = async () => {
-  const response = await getAdminQaList({
-    page: 1,
-    pageSize: 1000
-  })
+  const response = await getAdminQaList(buildQueryParams())
   qaRecords.value = response.data?.list || []
+  total.value = response.data?.total || 0
+}
+
+const fetchQaStats = async () => {
+  try {
+    const response = await getAdminQaStats()
+    const data = response.data || {}
+    qaStats.total = data.total || 0
+    qaStats.published = data.published || 0
+    qaStats.disabled = data.disabled || 0
+    qaStats.todayUpdated = data.todayUpdated || 0
+  } catch {
+    // stats fetch failure is non-critical
+  }
+}
+
+const fetchKeywordOptions = async () => {
+  try {
+    const response = await getAdminQaList({ page: 1, pageSize: 500 })
+    keywordOptions.value = [...new Set((response.data?.list || []).flatMap((item) => item.keywords))]
+  } catch {
+    keywordOptions.value = []
+  }
 }
 
 const openCreateDialog = () => {
@@ -378,26 +428,41 @@ const submitQaForm = async () => {
   }
 
   dialogVisible.value = false
-  await Promise.all([fetchQaRecords(), fetchCategories()])
+  await Promise.all([fetchQaRecords(), fetchCategories(), fetchQaStats()])
 }
 
 const toggleStatus = async (row) => {
   const status = row.status === '已发布' ? '已停用' : '已发布'
   await updateQa(row.id, { status })
   row.status = status
-  await fetchCategories()
+  await Promise.all([fetchCategories(), fetchQaStats()])
   ElMessage.success(`已${row.status}该问答`)
 }
 
 const handleDelete = async (row) => {
-  await ElMessageBox.confirm(`确认删除“${row.question}”吗？`, '删除确认', {
+  await ElMessageBox.confirm(`确认删除”${row.question}”吗？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '删除',
     cancelButtonText: '取消'
   })
   await deleteQa(row.id)
-  await Promise.all([fetchQaRecords(), fetchCategories()])
+  await Promise.all([fetchQaRecords(), fetchCategories(), fetchQaStats()])
   ElMessage.success('删除成功')
+}
+
+const onQaSelectionChange = (rows) => {
+  selectedQaIds.value = rows.map((r) => r.id)
+}
+
+const batchDeleteQa = async () => {
+  await ElMessageBox.confirm(`确认删除选中的 ${selectedQaIds.value.length} 条问答吗？`, '批量删除', {
+    type: 'warning',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  })
+  await apiBatchDeleteQa(selectedQaIds.value)
+  await Promise.all([fetchQaRecords(), fetchCategories(), fetchQaStats()])
+  ElMessage.success('批量删除成功')
 }
 
 const handleImport = () => {
@@ -584,7 +649,7 @@ const submitImportRows = async () => {
       ElMessage.success(`成功导入 ${importRows.value.length} 条问答`)
     }
     importVisible.value = false
-    await Promise.all([fetchQaRecords(), fetchCategories()])
+    await Promise.all([fetchQaRecords(), fetchCategories(), fetchQaStats()])
   } finally {
     importLoading.value = false
   }
@@ -599,7 +664,6 @@ const handleRebuildVector = async () => {
   rebuildLoading.value = true
   try {
     await rebuildVector()
-    rebuildLoading.value = false
     ElMessage.success('向量库重建成功')
   } finally {
     rebuildLoading.value = false
@@ -607,7 +671,7 @@ const handleRebuildVector = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchCategories(), fetchQaRecords()])
+  await Promise.all([fetchCategories(), fetchQaRecords(), fetchQaStats(), fetchKeywordOptions()])
 })
 </script>
 
@@ -733,6 +797,12 @@ onMounted(async () => {
   padding: 16px;
   border-radius: 22px;
   overflow: hidden;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .table-card :deep(.el-table) {

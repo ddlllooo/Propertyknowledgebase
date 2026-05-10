@@ -25,7 +25,7 @@
     </section>
 
     <section class="filter-card">
-      <el-input v-model="filters.keyword" clearable placeholder="搜索用户问题或回答" :prefix-icon="Search" />
+      <el-input v-model="filters.keyword" clearable placeholder="搜索用户问题或回答" :prefix-icon="Search" @input="onKeywordInput" />
       <el-select v-model="filters.category" placeholder="分类筛选">
         <el-option label="全部分类" value="全部" />
         <el-option v-for="item in categoryOptions" :key="item" :label="item" :value="item" />
@@ -50,10 +50,14 @@
       <el-button :type="filters.hitStatus === '未命中' ? 'primary' : 'danger'" plain @click="toggleUnmatchedOnly">
         {{ filters.hitStatus === '未命中' ? '查看全部咨询' : '仅查看未命中问题' }}
       </el-button>
+      <el-button type="danger" :disabled="!selectedLogIds.length" @click="batchDeleteLogs">
+        批量删除 {{ selectedLogIds.length ? `(${selectedLogIds.length})` : '' }}
+      </el-button>
     </section>
 
     <section v-loading="loading" class="table-card">
-      <el-table :data="filteredLogs" row-key="id" stripe>
+      <el-table :data="logRecords" row-key="id" stripe @selection-change="onLogSelectionChange">
+        <el-table-column type="selection" width="50" />
         <el-table-column prop="createdAt" label="咨询时间" width="152" />
         <el-table-column prop="username" label="用户账号" width="110" />
         <el-table-column prop="question" label="用户问题" min-width="220">
@@ -97,15 +101,27 @@
         <el-table-column label="响应耗时" width="96">
           <template #default="{ row }">{{ row.responseTime }}s</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button type="primary" link @click="openDetail(row)">查看详情</el-button>
+              <el-button type="primary" link @click="openDetail(row)">详情</el-button>
               <el-button type="success" link @click="openKnowledgeDialog(row)">加入知识库</el-button>
+              <el-button type="danger" link @click="handleDeleteLog(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="fetchLogs"
+          @current-change="fetchLogs"
+        />
+      </div>
     </section>
 
     <el-dialog v-model="detailVisible" title="咨询详情" width="720px">
@@ -195,14 +211,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getCategoryList } from '../../api/adminCategory'
 import { createQa, getAdminQaList } from '../../api/adminQa'
-import { getChatLogs } from '../../api/adminLog'
+import { batchDeleteChatLogs, deleteChatLog, getChatLogs, getChatLogStats } from '../../api/adminLog'
 
-const today = new Date().toISOString().slice(0, 10)
 const categoryOptions = ref([])
 const logRecords = ref([])
 const qaRecords = ref([])
@@ -211,6 +226,19 @@ const knowledgeVisible = ref(false)
 const activeLog = ref(null)
 const knowledgeFormRef = ref()
 const loading = ref(false)
+
+const currentPage = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+const selectedLogIds = ref([])
+
+const logStats = reactive({
+  total: 0,
+  todayCount: 0,
+  hitCount: 0,
+  unmatchedCount: 0,
+  avgResponseTime: 0
+})
 
 const filters = reactive({
   keyword: '',
@@ -236,42 +264,34 @@ const knowledgeRules = {
   source: [{ required: true, message: '请输入数据来源', trigger: 'blur' }]
 }
 
-const unmatchedCount = computed(() => logRecords.value.filter((item) => item.hitStatus === '未命中').length)
-
-const averageResponseTime = computed(() => {
-  if (!logRecords.value.length) return '0.00s'
-  const total = logRecords.value.reduce((sum, item) => sum + item.responseTime, 0)
-  return `${(total / logRecords.value.length).toFixed(2)}s`
-})
-
 const stats = computed(() => [
   {
     label: '总咨询量',
-    value: logRecords.value.length,
+    value: logStats.total,
     icon: 'ChatLineRound',
     color: 'linear-gradient(135deg, #1178ff, #56a9ff)'
   },
   {
     label: '今日咨询量',
-    value: logRecords.value.filter((item) => item.createdAt?.slice(0, 10) === today).length,
+    value: logStats.todayCount,
     icon: 'Calendar',
     color: 'linear-gradient(135deg, #13bea7, #5fd8c9)'
   },
   {
     label: '已命中问题',
-    value: logRecords.value.filter((item) => item.hitStatus === '已命中').length,
+    value: logStats.hitCount,
     icon: 'CircleCheck',
     color: 'linear-gradient(135deg, #20b486, #74d3b4)'
   },
   {
     label: '未命中问题',
-    value: unmatchedCount.value,
+    value: logStats.unmatchedCount,
     icon: 'Warning',
     color: 'linear-gradient(135deg, #ff6b6b, #ff9b8a)'
   },
   {
     label: '平均响应耗时',
-    value: averageResponseTime.value,
+    value: `${logStats.avgResponseTime.toFixed(2)}s`,
     icon: 'Timer',
     color: 'linear-gradient(135deg, #7c6cff, #9f94ff)'
   }
@@ -279,24 +299,58 @@ const stats = computed(() => [
 
 const keywordOptions = computed(() => [...new Set(qaRecords.value.flatMap((item) => item.keywords || []))])
 
-const filteredLogs = computed(() => {
-  const keyword = filters.keyword.trim().toLowerCase()
-  const [startDate, endDate] = filters.dateRange || []
+let keywordTimer = null
+const onKeywordInput = () => {
+  clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => {
+    currentPage.value = 1
+    fetchLogs()
+  }, 400)
+}
 
-  return logRecords.value.filter((item) => {
-    const keywordMatched =
-      !keyword || [item.question, item.answer, item.username, item.category].join(' ').toLowerCase().includes(keyword)
-    const categoryMatched = filters.category === '全部' || item.category === filters.category
-    const hitMatched = filters.hitStatus === '全部' || item.hitStatus === filters.hitStatus
-    const humanMatched = filters.needHuman === '全部' || String(item.needHuman) === filters.needHuman
-    const itemDate = item.createdAt.slice(0, 10)
-    const dateMatched = !startDate || (itemDate >= startDate && itemDate <= endDate)
-    return keywordMatched && categoryMatched && hitMatched && humanMatched && dateMatched
-  })
-})
+watch(
+  () => [filters.category, filters.hitStatus, filters.needHuman, filters.dateRange],
+  () => {
+    currentPage.value = 1
+    fetchLogs()
+  }
+)
+
+const buildQueryParams = () => {
+  const params = {
+    page: currentPage.value,
+    pageSize: pageSize.value
+  }
+  if (filters.keyword.trim()) params.keyword = filters.keyword.trim()
+  if (filters.category !== '全部') params.category = filters.category
+  if (filters.hitStatus !== '全部') params.hitStatus = filters.hitStatus
+  if (filters.needHuman !== '全部') params.needHuman = filters.needHuman
+  const [startDate, endDate] = filters.dateRange || []
+  if (startDate) params.startDate = startDate
+  if (endDate) params.endDate = endDate
+  return params
+}
 
 const toggleUnmatchedOnly = () => {
   filters.hitStatus = filters.hitStatus === '未命中' ? '全部' : '未命中'
+}
+
+const onLogSelectionChange = (rows) => {
+  selectedLogIds.value = rows.map((r) => r.id)
+}
+
+const handleDeleteLog = async (row) => {
+  await ElMessageBox.confirm('确认删除这条咨询记录吗？', '删除确认', { type: 'warning' })
+  await deleteChatLog(row.id)
+  await Promise.all([fetchLogs(), fetchStats()])
+  ElMessage.success('已删除')
+}
+
+const batchDeleteLogs = async () => {
+  await ElMessageBox.confirm(`确认删除选中的 ${selectedLogIds.value.length} 条记录吗？`, '批量删除', { type: 'warning' })
+  await batchDeleteChatLogs(selectedLogIds.value)
+  await Promise.all([fetchLogs(), fetchStats()])
+  ElMessage.success('批量删除成功')
 }
 
 const openDetail = (row) => {
@@ -328,36 +382,50 @@ const saveToKnowledgeBase = async () => {
     status: '已发布',
     chatLogId: activeLog.value?.id
   })
-  if (activeLog.value) {
-    activeLog.value.answer = knowledgeForm.answer
-    activeLog.value.category = knowledgeForm.category
-    activeLog.value.hitStatus = '已命中'
-    activeLog.value.needHuman = false
-    activeLog.value.similarity = Math.max(activeLog.value.similarity, 0.86)
-  }
   knowledgeVisible.value = false
   detailVisible.value = false
-  await fetchData()
+  await Promise.all([fetchLogs(), fetchStats()])
   ElMessage.success('已加入知识库，后续可用于优化 RAG 命中效果')
 }
 
-const fetchData = async () => {
+const fetchLogs = async () => {
   loading.value = true
   try {
-    const [categoryResponse, logResponse, qaResponse] = await Promise.all([
-      getCategoryList(),
-      getChatLogs({ page: 1, pageSize: 300 }),
-      getAdminQaList({ page: 1, pageSize: 200 })
-    ])
-    categoryOptions.value = (categoryResponse.data || []).map((item) => item.name)
-    logRecords.value = logResponse.data?.list || []
-    qaRecords.value = qaResponse.data?.list || []
+    const response = await getChatLogs(buildQueryParams())
+    logRecords.value = response.data?.list || []
+    total.value = response.data?.total || 0
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchData)
+const fetchStats = async () => {
+  try {
+    const response = await getChatLogStats()
+    const data = response.data || {}
+    logStats.total = data.total || 0
+    logStats.todayCount = data.todayCount || 0
+    logStats.hitCount = data.hitCount || 0
+    logStats.unmatchedCount = data.unmatchedCount || 0
+    logStats.avgResponseTime = data.avgResponseTime || 0
+  } catch {
+    // stats fetch failure is non-critical
+  }
+}
+
+const fetchCategories = async () => {
+  const response = await getCategoryList()
+  categoryOptions.value = (response.data || []).map((item) => item.name)
+}
+
+const fetchKeywordOptions = async () => {
+  const response = await getAdminQaList({ page: 1, pageSize: 500 })
+  qaRecords.value = response.data?.list || []
+}
+
+onMounted(async () => {
+  await Promise.all([fetchCategories(), fetchLogs(), fetchStats(), fetchKeywordOptions()])
+})
 </script>
 
 <style scoped>
@@ -473,17 +541,29 @@ onMounted(fetchData)
 }
 
 .filter-card {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) 150px 150px 150px minmax(260px, 320px) 150px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 18px;
   border-radius: 20px;
+}
+
+.filter-card .el-input,
+.filter-card .el-select,
+.filter-card .el-date-picker {
+  flex: 0 0 auto;
 }
 
 .table-card {
   padding: 16px;
   border-radius: 22px;
   overflow: hidden;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .table-card :deep(.el-table) {

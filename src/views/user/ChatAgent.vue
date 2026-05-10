@@ -225,13 +225,17 @@ const submitFeedback = async () => {
     ElMessage.warning('当前回答暂无法提交反馈')
     return
   }
-  await createFeedback({
-    chatLogId: activeFeedbackMessage.value.chatLogId,
-    feedbackType: feedbackForm.type,
-    suggestion: feedbackForm.content
-  })
-  feedbackVisible.value = false
-  ElMessage.success('反馈已提交')
+  try {
+    await createFeedback({
+      chatLogId: activeFeedbackMessage.value.chatLogId,
+      feedbackType: feedbackForm.type,
+      suggestion: feedbackForm.content
+    })
+    feedbackVisible.value = false
+    ElMessage.success('反馈已提交')
+  } catch {
+    ElMessage.error('反馈提交失败，请稍后重试')
+  }
 }
 
 onMounted(async () => {
