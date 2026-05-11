@@ -124,7 +124,7 @@
       </div>
     </section>
 
-    <el-dialog v-model="detailVisible" title="咨询详情" width="720px">
+    <el-dialog v-model="detailVisible" title="咨询详情" :width="detailDialogWidth">
       <template v-if="activeLog">
         <div class="detail-grid">
           <div class="detail-item wide">
@@ -171,7 +171,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="knowledgeVisible" title="加入知识库" width="680px">
+    <el-dialog v-model="knowledgeVisible" title="加入知识库" :width="knowledgeDialogWidth">
       <el-form ref="knowledgeFormRef" :model="knowledgeForm" :rules="knowledgeRules" label-position="top">
         <el-form-item label="标准问题" prop="question">
           <el-input v-model="knowledgeForm.question" />
@@ -214,9 +214,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { getCategoryList } from '../../api/adminCategory'
 import { createQa, getAdminQaList } from '../../api/adminQa'
 import { batchDeleteChatLogs, deleteChatLog, getChatLogs, getChatLogStats } from '../../api/adminLog'
+
+const detailDialogWidth = useDialogWidth(720)
+const knowledgeDialogWidth = useDialogWidth(680)
 
 const categoryOptions = ref([])
 const logRecords = ref([])
@@ -664,6 +668,17 @@ onMounted(async () => {
   .form-grid,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .filter-card .el-select,
+  .filter-card .el-date-editor {
+    width: 100%;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

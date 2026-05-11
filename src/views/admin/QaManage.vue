@@ -109,7 +109,7 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增问答' : '编辑问答'" width="680px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增问答' : '编辑问答'" :width="qaDialogWidth">
       <el-form ref="qaFormRef" :model="qaForm" :rules="rules" label-position="top">
         <el-form-item label="标准问题" prop="question">
           <el-input v-model="qaForm.question" placeholder="请输入标准问题" />
@@ -164,7 +164,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importVisible" title="批量导入问答" width="860px">
+    <el-dialog v-model="importVisible" title="批量导入问答" :width="importDialogWidth">
       <div class="import-tools">
         <el-button :icon="Download" @click="downloadImportTemplate">下载导入模板</el-button>
         <el-button type="primary" :icon="Upload" @click="triggerFileSelect">选择 CSV 文件</el-button>
@@ -232,9 +232,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { batchCreateQa, batchDeleteQa as apiBatchDeleteQa, createQa, deleteQa, getAdminQaList, getAdminQaStats, updateQa } from '../../api/adminQa'
 import { getCategoryList } from '../../api/adminCategory'
 import { rebuildVector } from '../../api/vector'
+
+const qaDialogWidth = useDialogWidth(680)
+const importDialogWidth = useDialogWidth(860)
 
 const categoryRecords = ref([])
 const statusOptions = ['已发布', '草稿', '待审核', '已停用']
@@ -938,6 +942,20 @@ onMounted(async () => {
   .filter-row,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .action-row {
+    flex-wrap: wrap;
   }
 }
 </style>

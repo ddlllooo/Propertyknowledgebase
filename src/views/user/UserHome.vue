@@ -479,8 +479,9 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .hero {
+    grid-template-columns: 1fr;
     padding-bottom: 250px;
   }
 
@@ -490,8 +491,20 @@ onMounted(async () => {
     width: min(330px, calc(100% - 44px));
   }
 
-  .entry-grid,
+  .ring {
+    width: 140px;
+    height: 140px;
+  }
+
   .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-bottom {
     grid-template-columns: 1fr;
   }
 }

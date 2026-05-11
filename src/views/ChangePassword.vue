@@ -146,4 +146,18 @@ const handleSubmit = async () => {
   background: linear-gradient(120deg, #1178ff, #13bea7);
   font-weight: 700;
 }
+
+@media (max-width: 767px) {
+  .change-password-page {
+    padding: 20px;
+  }
+
+  .change-password-card {
+    padding: 24px;
+  }
+
+  .card-head span {
+    font-size: 22px;
+  }
+}
 </style>

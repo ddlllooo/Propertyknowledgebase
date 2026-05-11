@@ -1,6 +1,6 @@
 <template>
   <el-container class="user-layout">
-    <el-aside width="248px" class="sidebar">
+    <el-aside v-if="!isMobile" width="248px" class="sidebar">
       <router-link class="logo" to="/user/home">
         <span class="logo-icon"><el-icon><HomeFilled /></el-icon></span>
         <span>
@@ -19,9 +19,14 @@
 
     <el-container>
       <el-header class="topbar">
-        <div>
-          <p class="eyebrow">普通用户端</p>
-          <h1>{{ currentTitle }}</h1>
+        <div class="topbar-left">
+          <button v-if="isMobile" class="hamburger" @click="drawerVisible = true">
+            <el-icon :size="22"><Expand /></el-icon>
+          </button>
+          <div>
+            <p class="eyebrow">普通用户端</p>
+            <h1>{{ currentTitle }}</h1>
+          </div>
         </div>
         <div class="top-actions">
           <el-tag effect="light" round>在线服务</el-tag>
@@ -47,24 +52,70 @@
         <router-view />
       </el-main>
     </el-container>
+
+    <!-- Mobile drawer -->
+    <el-drawer
+      v-model="drawerVisible"
+      direction="ltr"
+      size="280px"
+      :show-close="false"
+      class="mobile-drawer"
+    >
+      <template #header>
+        <router-link class="logo" to="/user/home" @click="drawerVisible = false">
+          <span class="logo-icon"><el-icon><HomeFilled /></el-icon></span>
+          <span>
+            <strong>智慧物业</strong>
+            <small>知识咨询平台</small>
+          </span>
+        </router-link>
+      </template>
+      <el-menu :default-active="route.path" router class="drawer-menu">
+        <el-menu-item
+          v-for="item in menus"
+          :key="item.path"
+          :index="item.path"
+          @click="drawerVisible = false"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </el-menu-item>
+      </el-menu>
+    </el-drawer>
+
+    <!-- Mobile bottom nav -->
+    <nav v-if="isMobile" class="mobile-bottom-nav">
+      <router-link
+        v-for="item in menus"
+        :key="item.path"
+        :to="item.path"
+        class="bottom-nav-item"
+        :class="{ active: route.path === item.path }"
+      >
+        <el-icon :size="20"><component :is="item.icon" /></el-icon>
+        <span>{{ item.label.replace('我的', '') }}</span>
+      </router-link>
+    </nav>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { ArrowDown, HomeFilled, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowDown, HomeFilled, SwitchButton, Expand } from '@element-plus/icons-vue'
+import { isMobile } from '../composables/useBreakpoint'
 
 const route = useRoute()
 const router = useRouter()
 const username = sessionStorage.getItem('username') || 'user'
+const drawerVisible = ref(false)
 
 const menus = [
   { label: '用户首页', path: '/user/home', icon: 'DataAnalysis' },
   { label: '在线知识库', path: '/user/knowledge', icon: 'Collection' },
   { label: '智能问答', path: '/user/chat', icon: 'ChatDotRound' },
-  { label: '我的咨询记录', path: '/user/history', icon: 'Clock' },
+  { label: '咨询记录', path: '/user/history', icon: 'Clock' },
   { label: '我的反馈', path: '/user/feedback', icon: 'EditPen' }
 ]
 
@@ -160,6 +211,29 @@ const handleCommand = async (command) => {
   backdrop-filter: blur(16px);
 }
 
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #172b4d;
+  cursor: pointer;
+}
+
+.hamburger:active {
+  background: rgba(17, 120, 255, 0.08);
+}
+
 .eyebrow {
   margin: 0 0 5px;
   color: #7890a8;
@@ -197,24 +271,90 @@ const handleCommand = async (command) => {
   padding: 28px;
 }
 
-@media (max-width: 900px) {
+/* Drawer menu */
+.drawer-menu {
+  border-right: 0;
+  background: transparent;
+}
+
+.drawer-menu :deep(.el-menu-item) {
+  height: 48px;
+  margin: 6px 0;
+  border-radius: 14px;
+  color: #5a6f85;
+}
+
+.drawer-menu :deep(.el-menu-item.is-active) {
+  color: #0e6fff;
+  background: linear-gradient(90deg, rgba(17, 120, 255, 0.13), rgba(19, 190, 167, 0.1));
+  font-weight: 700;
+}
+
+/* Bottom navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid rgba(207, 224, 237, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #7890a8;
+  font-size: 11px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.bottom-nav-item.active {
+  color: #0e6fff;
+}
+
+.bottom-nav-item span {
+  line-height: 1.2;
+}
+
+@media (max-width: 767px) {
   .user-layout {
     display: block;
   }
 
-  .sidebar {
-    position: static;
-    width: 100% !important;
-    height: auto;
-  }
-
-  .nav-menu {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .topbar {
-    padding: 0 18px;
+    height: 60px;
+    padding: 0 16px;
+  }
+
+  .topbar h1 {
+    font-size: 18px;
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  .top-actions .el-tag {
+    display: none;
+  }
+
+  .user-button span {
+    display: none;
+  }
+
+  .content {
+    padding: 16px;
+    padding-bottom: 80px;
   }
 }
 </style>

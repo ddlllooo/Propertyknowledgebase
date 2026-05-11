@@ -73,7 +73,7 @@
 
     <el-empty v-if="filteredCategories.length === 0" description="暂无匹配分类" />
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增分类' : '编辑分类'" width="560px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增分类' : '编辑分类'" :width="dialogWidth">
       <el-form ref="categoryFormRef" :model="categoryForm" :rules="rules" label-position="top">
         <el-form-item label="分类名称" prop="name">
           <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
@@ -111,8 +111,11 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { createCategory, deleteCategory, getCategoryList, updateCategory } from '../../api/adminCategory'
 import { getAdminQaList } from '../../api/adminQa'
+
+const dialogWidth = useDialogWidth(560)
 
 const keyword = ref('')
 const statusFilter = ref('全部')
@@ -473,6 +476,20 @@ onMounted(async () => {
   .toolbar-card,
   .category-grid,
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .toolbar-card .toolbar-grid {
     grid-template-columns: 1fr;
   }
 }

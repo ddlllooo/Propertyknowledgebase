@@ -97,7 +97,7 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增用户' : '编辑用户'" width="560px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增用户' : '编辑用户'" :width="dialogWidth">
       <el-form ref="formRef" :model="userForm" :rules="rules" label-position="top">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="userForm.username" :disabled="dialogMode === 'edit'" placeholder="请输入用户名" />
@@ -138,7 +138,10 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { batchUpdateUserStatus, createUser, deleteUser, getUserList, updateUser } from '../../api/adminUser'
+
+const dialogWidth = useDialogWidth(560)
 
 const userRecords = ref([])
 const loading = ref(false)
@@ -507,6 +510,16 @@ onMounted(fetchUsers)
   .filter-row,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

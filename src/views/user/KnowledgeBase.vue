@@ -337,10 +337,17 @@ const sendHelpful = async (type) => {
   }
 }
 
-@media (max-width: 760px) {
-  .search-hero,
+@media (max-width: 767px) {
+  .search-hero {
+    grid-template-columns: 1fr;
+  }
+
   .knowledge-grid {
     grid-template-columns: 1fr;
+  }
+
+  .filter-row button {
+    min-height: 44px;
   }
 }
 </style>

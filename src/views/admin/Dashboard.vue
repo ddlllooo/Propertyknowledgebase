@@ -547,4 +547,18 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 767px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart {
+    height: 260px;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 </style>

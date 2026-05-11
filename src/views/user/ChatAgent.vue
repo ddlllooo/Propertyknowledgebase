@@ -79,7 +79,7 @@
       </aside>
     </section>
 
-    <el-dialog v-model="feedbackVisible" title="提交反馈" width="460px">
+    <el-dialog v-model="feedbackVisible" title="提交反馈" :width="feedbackDialogWidth">
       <el-form label-position="top">
         <el-form-item label="反馈类型">
           <el-input v-model="feedbackForm.type" disabled />
@@ -105,8 +105,11 @@
 import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Promotion } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { sendQuestion } from '../../api/chat'
 import { createFeedback } from '../../api/feedback'
+
+const feedbackDialogWidth = useDialogWidth(460)
 
 const CHAT_SESSION_KEY = 'userChatAgentMessages'
 
@@ -434,6 +437,20 @@ onMounted(async () => {
 
   .chat-panel {
     grid-template-rows: minmax(520px, 62vh) auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .chat-panel {
+    grid-template-rows: minmax(400px, calc(100vh - 180px));
+  }
+
+  .side-panel {
+    display: none;
+  }
+
+  .bubble {
+    max-width: 90%;
   }
 }
 </style>

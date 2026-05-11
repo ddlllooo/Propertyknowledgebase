@@ -1,6 +1,6 @@
 <template>
   <el-container class="admin-layout">
-    <el-aside width="260px" class="admin-sidebar">
+    <el-aside v-if="!isMobile" width="260px" class="admin-sidebar">
       <router-link class="admin-logo" to="/admin/home">
         <span class="logo-mark">
           <el-icon><Setting /></el-icon>
@@ -21,9 +21,14 @@
 
     <el-container>
       <el-header class="admin-header">
-        <div class="page-title">
-          <span>管理员端</span>
-          <h1>{{ currentTitle }}</h1>
+        <div class="admin-header-left">
+          <button v-if="isMobile" class="hamburger" @click="drawerVisible = true">
+            <el-icon :size="22"><Expand /></el-icon>
+          </button>
+          <div class="page-title">
+            <span>管理员端</span>
+            <h1>{{ currentTitle }}</h1>
+          </div>
         </div>
 
         <div class="header-actions">
@@ -42,17 +47,51 @@
         <router-view />
       </el-main>
     </el-container>
+
+    <!-- Mobile drawer -->
+    <el-drawer
+      v-model="drawerVisible"
+      direction="ltr"
+      size="280px"
+      :show-close="false"
+      class="mobile-drawer"
+    >
+      <template #header>
+        <router-link class="admin-logo" to="/admin/home" @click="drawerVisible = false">
+          <span class="logo-mark">
+            <el-icon><Setting /></el-icon>
+          </span>
+          <span>
+            <strong>智慧物业管理端</strong>
+            <small>Knowledge Admin</small>
+          </span>
+        </router-link>
+      </template>
+      <el-menu :default-active="route.path" router class="drawer-menu">
+        <el-menu-item
+          v-for="item in menus"
+          :key="item.path"
+          :index="item.path"
+          @click="drawerVisible = false"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </el-menu-item>
+      </el-menu>
+    </el-drawer>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { Setting, SwitchButton } from '@element-plus/icons-vue'
+import { Setting, SwitchButton, Expand } from '@element-plus/icons-vue'
+import { isMobile } from '../composables/useBreakpoint'
 
 const route = useRoute()
 const router = useRouter()
+const drawerVisible = ref(false)
 
 const adminName = sessionStorage.getItem('username') || 'admin'
 
@@ -171,6 +210,29 @@ const handleLogout = async () => {
   backdrop-filter: blur(16px);
 }
 
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #172b4d;
+  cursor: pointer;
+}
+
+.hamburger:active {
+  background: rgba(17, 120, 255, 0.08);
+}
+
 .page-title span {
   color: #7b8fa6;
   font-size: 13px;
@@ -208,37 +270,52 @@ const handleLogout = async () => {
   padding: 30px;
 }
 
-@media (max-width: 980px) {
+/* Drawer menu */
+.drawer-menu {
+  border-right: 0;
+  background: transparent;
+}
+
+.drawer-menu :deep(.el-menu-item) {
+  height: 48px;
+  margin: 6px 0;
+  border-radius: 14px;
+  color: #5b7088;
+}
+
+.drawer-menu :deep(.el-menu-item.is-active) {
+  color: #0e6fff;
+  background: linear-gradient(90deg, rgba(17, 120, 255, 0.14), rgba(19, 190, 167, 0.1));
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
   .admin-layout {
     display: block;
   }
 
-  .admin-sidebar {
-    position: static;
-    width: 100% !important;
-    height: auto;
-  }
-
-  .admin-menu {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .admin-header {
     height: auto;
-    min-height: 82px;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 18px;
-    flex-direction: column;
+    min-height: 60px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .page-title h1 {
+    font-size: 18px;
+  }
+
+  .page-title span {
+    font-size: 12px;
   }
 
   .header-actions {
-    flex-wrap: wrap;
+    display: none;
   }
 
   .admin-main {
-    padding: 20px;
+    padding: 16px;
   }
 }
 </style>

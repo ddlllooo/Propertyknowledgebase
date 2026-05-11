@@ -593,4 +593,18 @@ onBeforeUnmount(() => {
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 767px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

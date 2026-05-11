@@ -64,7 +64,7 @@
     </div>
     <el-empty v-else description="暂无密码重置请求" />
 
-    <el-dialog v-model="tempDialogVisible" title="临时密码" width="420px">
+    <el-dialog v-model="tempDialogVisible" title="临时密码" :width="dialogWidth">
       <p style="color: #6b7c93; margin-bottom: 16px;">请将以下临时密码告知用户：</p>
       <div class="temp-password-box">
         <span class="temp-password-text">{{ currentTempPassword }}</span>
@@ -81,7 +81,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Document, Clock, CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { getPasswordResetList, adminResetPassword, ignorePasswordReset } from '../../api/adminPasswordReset'
+
+const dialogWidth = useDialogWidth(420)
 
 const list = ref([])
 const filterStatus = ref('')
@@ -363,5 +366,23 @@ onMounted(() => {
   color: #172b4d;
   letter-spacing: 2px;
   font-family: monospace;
+}
+
+@media (max-width: 767px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-bar .el-select {
+    width: 100% !important;
+  }
+
+  .filter-bar .el-input {
+    width: 100% !important;
+  }
 }
 </style>

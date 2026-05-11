@@ -70,3 +70,76 @@ a {
   background-clip: text;
   color: transparent;
 }
+
+/* ---- Mobile responsive tokens & overrides ---- */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --tap-min: 44px;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  /* Dialogs */
+  .el-dialog {
+    width: 90vw !important;
+    margin: 5vh auto;
+  }
+  .el-dialog__body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  /* Drawers */
+  .el-drawer {
+    width: 100vw !important;
+  }
+
+  /* Pagination compact */
+  .el-pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .el-pagination .el-pagination__sizes,
+  .el-pagination .el-pagination__jump {
+    display: none;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input,
+  textarea,
+  select,
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 16px !important;
+  }
+
+  /* Touch-friendly targets */
+  .el-button {
+    min-height: var(--tap-min);
+  }
+  .el-menu-item {
+    min-height: var(--tap-min);
+  }
+  .el-input__wrapper {
+    min-height: var(--tap-min);
+  }
+  .el-select .el-input__wrapper {
+    min-height: var(--tap-min);
+  }
+
+  /* Overflow prevention */
+  .page-shell {
+    overflow-x: hidden;
+  }
+  .el-table__body-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

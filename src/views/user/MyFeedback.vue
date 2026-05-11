@@ -218,4 +218,14 @@ onMounted(async () => {
     align-items: flex-start;
   }
 }
+
+@media (max-width: 767px) {
+  .feedback-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-tabs button {
+    min-height: 44px;
+  }
+}
 </style>

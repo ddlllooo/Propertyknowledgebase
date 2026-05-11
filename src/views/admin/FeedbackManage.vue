@@ -69,7 +69,7 @@
 
     <el-empty v-if="filteredFeedback.length === 0" description="暂无匹配反馈" />
 
-    <el-dialog v-model="detailVisible" title="反馈详情" width="720px">
+    <el-dialog v-model="detailVisible" title="反馈详情" :width="detailDialogWidth">
       <template v-if="activeFeedback">
         <div class="detail-grid">
           <div class="detail-item wide">
@@ -116,7 +116,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="processVisible" title="标记已处理" width="520px">
+    <el-dialog v-model="processVisible" title="标记已处理" :width="processDialogWidth">
       <el-form label-position="top">
         <el-form-item label="管理员处理说明">
           <el-input
@@ -134,7 +134,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="knowledgeVisible" title="加入知识库" width="680px">
+    <el-dialog v-model="knowledgeVisible" title="加入知识库" :width="knowledgeDialogWidth">
       <el-form ref="knowledgeFormRef" :model="knowledgeForm" :rules="knowledgeRules" label-position="top">
         <el-form-item label="标准问题" prop="question">
           <el-input v-model="knowledgeForm.question" />
@@ -177,9 +177,14 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight, Search } from '@element-plus/icons-vue'
+import { useDialogWidth } from '../../composables/useDialogWidth'
 import { getCategoryList } from '../../api/adminCategory'
 import { deleteFeedback, feedbackToKnowledge, getFeedbackList, updateFeedbackStatus } from '../../api/adminFeedback'
 import { getAdminQaList } from '../../api/adminQa'
+
+const detailDialogWidth = useDialogWidth(720)
+const processDialogWidth = useDialogWidth(520)
+const knowledgeDialogWidth = useDialogWidth(680)
 
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
 const typeOptions = ['全部', '有帮助', '没帮助', '需要人工']
@@ -647,6 +652,20 @@ onMounted(async () => {
 @media (max-width: 720px) {
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .filter-card .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .card-main {
+    flex-direction: column;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <el-dialog v-model="registerVisible" title="注册账号" width="460px" @closed="resetRegisterForm">
+    <el-dialog v-model="registerVisible" title="注册账号" :width="registerDialogWidth" @closed="resetRegisterForm">
       <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top" size="large">
         <el-form-item label="姓名" prop="name">
           <el-input v-model="registerForm.name" placeholder="请输入您的姓名" :prefix-icon="User" />
@@ -100,7 +100,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="resetVisible" title="找回密码" width="460px" @closed="resetResetForm">
+    <el-dialog v-model="resetVisible" title="找回密码" :width="resetDialogWidth" @closed="resetResetForm">
       <!-- Step 1: Submit request -->
       <div v-if="resetStep === 1">
         <p style="color: #6b7c93; margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。</p>
@@ -161,6 +161,10 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useDialogWidth } from '../composables/useDialogWidth'
+
+const registerDialogWidth = useDialogWidth(460)
+const resetDialogWidth = useDialogWidth(460)
 import { Connection, Key, Lock, Message, User } from '@element-plus/icons-vue'
 import { login, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
 
@@ -596,17 +600,41 @@ const copyTempPassword = () => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .login-page {
-    padding: 22px;
+    padding: 16px;
   }
 
   .brand-panel {
-    padding: 32px 24px;
+    padding: 24px 20px;
+  }
+
+  .brand-panel h1 {
+    font-size: clamp(24px, 6vw, 36px);
+    margin: 24px 0 12px;
+  }
+
+  .brand-panel p {
+    font-size: 15px;
+    line-height: 1.7;
   }
 
   .feature-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    margin-top: 24px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .captcha-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .captcha-row .el-input {
+    flex: 1;
   }
 }
 </style>

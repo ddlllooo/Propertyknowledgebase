@@ -349,4 +349,14 @@ onMounted(loadVectorStatus)
     flex-direction: column;
   }
 }
+
+@media (max-width: 767px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-strip {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

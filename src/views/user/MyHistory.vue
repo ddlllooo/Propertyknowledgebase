@@ -185,4 +185,15 @@ onMounted(fetchData)
     margin-top: 12px;
   }
 }
+
+@media (max-width: 767px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}
 </style>
