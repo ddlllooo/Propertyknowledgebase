@@ -482,16 +482,33 @@ onMounted(async () => {
 @media (max-width: 767px) {
   .hero {
     grid-template-columns: 1fr;
-    padding-bottom: 250px;
+    padding-bottom: 24px;
   }
 
   .hero-visual {
-    right: 22px;
-    bottom: 24px;
-    width: min(330px, calc(100% - 44px));
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    min-height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .pulse-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    justify-content: center;
   }
 
   .ring {
+    position: relative;
+    right: auto;
+    bottom: auto;
     width: 140px;
     height: 140px;
   }
