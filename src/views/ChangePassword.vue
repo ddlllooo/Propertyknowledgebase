@@ -91,7 +91,7 @@ const handleSubmit = async () => {
     await changePassword({ newPassword: form.newPassword })
     ElMessage.success('密码修改成功')
     sessionStorage.removeItem('mustChangePassword')
-    const role = sessionStorage.getItem('role')
+    const role = sessionStorage.getItem('role') || localStorage.getItem('role')
     router.push(role === 'admin' ? '/admin/home' : '/user/home')
   } catch (error) {
     const data = error?.response?.data

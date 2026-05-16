@@ -10,13 +10,16 @@ const request = axios.create({
 
 const redirectToLogin = () => {
   sessionStorage.clear()
+  localStorage.removeItem('token')
+  localStorage.removeItem('role')
+  localStorage.removeItem('username')
   if (window.location.pathname !== '/login') {
     window.location.href = '/login'
   }
 }
 
 request.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token')
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

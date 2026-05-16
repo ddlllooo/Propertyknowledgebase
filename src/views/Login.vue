@@ -3,18 +3,12 @@
     <section class="brand-panel">
       <div class="brand-badge">
         <el-icon><Connection /></el-icon>
-        智慧物业服务
+        业主服务
       </div>
-      <h1>智慧物业知识库咨询平台</h1>
+      <h1>有问题？问物业</h1>
       <p>
-        面向业主的轻量化知识查询与智能问答入口，让缴费、报修、停车、装修等服务咨询更高效。
+        缴费、报修、停车、装修——有疑问就来这里问，随时为您解答。
       </p>
-      <div class="feature-grid">
-        <div v-for="item in features" :key="item.title" class="feature-item">
-          <el-icon><component :is="item.icon" /></el-icon>
-          <span>{{ item.title }}</span>
-        </div>
-      </div>
     </section>
 
     <section class="login-card">
@@ -29,14 +23,17 @@
         <el-form-item prop="password">
           <el-input
             v-model="form.password"
-            placeholder="请输入密码 123456"
+            placeholder="请输入密码"
             type="password"
             show-password
             :prefix-icon="Lock"
           />
         </el-form-item>
+        <div class="remember-row">
+          <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+        </div>
         <el-button class="login-button" type="primary" :loading="loading" @click="handleLogin">
-          登录平台
+          登录
         </el-button>
       </el-form>
       <div class="register-entry">
@@ -103,7 +100,7 @@
     <el-dialog v-model="resetVisible" title="找回密码" :width="resetDialogWidth" @closed="resetResetForm">
       <!-- Step 1: Submit request -->
       <div v-if="resetStep === 1">
-        <p style="color: #6b7c93; margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。</p>
+        <p style="color: #6b7c93; margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。如有紧急问题，请联系物业前台。</p>
         <el-input
           v-model="resetUsername"
           placeholder="请输入用户名或邮箱"
@@ -114,7 +111,7 @@
       <!-- Step 2: Request submitted, can query status -->
       <div v-if="resetStep === 2">
         <el-alert type="success" :closable="false" show-icon style="margin-bottom: 16px;">
-          重置请求已提交，请等待管理员处理。稍后可在此查询结果。
+          重置请求已提交，通常在 1 个工作日内处理。稍后可在此查询结果。
         </el-alert>
         <el-input
           v-model="resetUsername"
@@ -180,10 +177,11 @@ const resetStep = ref(1)
 const resetUsername = ref('')
 const resetResult = ref({})
 const captchaImage = ref('')
+const rememberMe = ref(false)
 
 const form = reactive({
-  username: 'user',
-  password: '123456'
+  username: '',
+  password: ''
 })
 
 const registerForm = reactive({
@@ -223,7 +221,7 @@ const validateConfirmPassword = (_rule, value, callback) => {
 }
 
 const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入姓名或邮箱', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
@@ -244,13 +242,6 @@ const registerRules = {
     { len: 4, message: '验证码为 4 位数字', trigger: 'blur' }
   ]
 }
-
-const features = [
-  { title: '知识检索', icon: 'Search' },
-  { title: '智能问答', icon: 'ChatDotRound' },
-  { title: '咨询记录', icon: 'Clock' },
-  { title: '反馈闭环', icon: 'EditPen' }
-]
 
 const getErrorMessage = (error, fallback = '操作失败') => {
   const data = error?.response?.data
@@ -280,9 +271,16 @@ const handleLogin = async () => {
     })
     const userInfo = normalizeLoginResult(response)
 
-    sessionStorage.setItem('token', userInfo.token)
-    sessionStorage.setItem('role', userInfo.role)
-    sessionStorage.setItem('username', userInfo.username)
+    const storage = rememberMe.value ? localStorage : sessionStorage
+    storage.setItem('token', userInfo.token)
+    storage.setItem('role', userInfo.role)
+    storage.setItem('username', userInfo.username)
+
+    // 清理另一个 storage 避免冲突
+    const other = rememberMe.value ? sessionStorage : localStorage
+    other.removeItem('token')
+    other.removeItem('role')
+    other.removeItem('username')
 
     if (userInfo.mustChangePassword) {
       sessionStorage.setItem('mustChangePassword', 'true')
@@ -407,7 +405,7 @@ const copyTempPassword = () => {
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) 420px;
+  grid-template-columns: minmax(0, 1fr) minmax(400px, 460px);
   gap: 42px;
   align-items: center;
   padding: 64px clamp(28px, 6vw, 96px);
@@ -417,16 +415,16 @@ const copyTempPassword = () => {
 }
 
 .brand-panel {
-  min-height: 520px;
-  padding: 54px;
-  border-radius: 30px;
+  min-height: 420px;
+  padding: 48px;
+  border-radius: 24px;
   color: #fff;
   background:
     linear-gradient(135deg, rgba(10, 103, 230, 0.92), rgba(18, 184, 166, 0.86)),
     url("/images/bg-login.jpg")
       center/cover;
   background-blend-mode: multiply;
-  box-shadow: 0 26px 70px rgba(17, 98, 191, 0.26);
+  box-shadow: 0 16px 48px rgba(17, 98, 191, 0.18);
   overflow: hidden;
 }
 
@@ -437,16 +435,15 @@ const copyTempPassword = () => {
   gap: 8px;
   padding: 9px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .brand-panel h1 {
   max-width: 720px;
-  margin: 58px 0 20px;
-  font-size: clamp(36px, 5vw, 62px);
-  line-height: 1.12;
-  font-weight: 800;
+  margin: 36px 0 16px;
+  font-size: clamp(26px, 3.5vw, 40px);
+  line-height: 1.2;
+  font-weight: 700;
 }
 
 .brand-panel p {
@@ -457,29 +454,11 @@ const copyTempPassword = () => {
   line-height: 1.9;
 }
 
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 14px;
-  margin-top: 56px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.13);
-  backdrop-filter: blur(10px);
-}
-
 .login-card {
-  padding: 34px;
+  padding: 40px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 20px 60px rgba(15, 62, 111, 0.16);
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(15, 62, 111, 0.1);
 }
 
 .card-head {
@@ -491,7 +470,7 @@ const copyTempPassword = () => {
 
 .card-head span {
   color: #172b4d;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
 }
 
@@ -506,6 +485,15 @@ const copyTempPassword = () => {
   border-radius: 14px;
   background: linear-gradient(120deg, #1178ff, #13bea7);
   font-weight: 700;
+}
+
+.remember-row {
+  margin-bottom: 16px;
+}
+
+.remember-row :deep(.el-checkbox__label) {
+  color: #6b7c93;
+  font-size: 14px;
 }
 
 .register-entry {
@@ -617,11 +605,6 @@ const copyTempPassword = () => {
   .brand-panel p {
     font-size: 15px;
     line-height: 1.7;
-  }
-
-  .feature-grid {
-    grid-template-columns: 1fr;
-    margin-top: 24px;
   }
 
   .login-card {

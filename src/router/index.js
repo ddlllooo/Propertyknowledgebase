@@ -21,8 +21,8 @@ const routes = [
   {
     path: '/',
     redirect: () => {
-      const token = sessionStorage.getItem('token')
-      const role = sessionStorage.getItem('role')
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+      const role = sessionStorage.getItem('role') || localStorage.getItem('role')
 
       if (!token) return '/login'
       if (role === 'admin') return '/admin/home'
@@ -151,8 +151,8 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  const token = sessionStorage.getItem('token')
-  const role = sessionStorage.getItem('role')
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+  const role = sessionStorage.getItem('role') || localStorage.getItem('role')
 
   if (to.path === '/login' && token) {
     next(role === 'admin' ? '/admin/home' : '/user/home')

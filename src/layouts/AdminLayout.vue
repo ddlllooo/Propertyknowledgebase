@@ -93,7 +93,7 @@ const route = useRoute()
 const router = useRouter()
 const drawerVisible = ref(false)
 
-const adminName = sessionStorage.getItem('username') || 'admin'
+const adminName = sessionStorage.getItem('username') || localStorage.getItem('username') || 'admin'
 
 const menus = [
   { label: '工作台', path: '/admin/home', icon: 'Monitor' },
@@ -118,6 +118,9 @@ const handleLogout = async () => {
     cancelButtonText: '取消'
   })
   sessionStorage.clear()
+  localStorage.removeItem('token')
+  localStorage.removeItem('role')
+  localStorage.removeItem('username')
   router.push('/login')
 }
 </script>

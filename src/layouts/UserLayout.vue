@@ -108,7 +108,7 @@ import { isMobile } from '../composables/useBreakpoint'
 
 const route = useRoute()
 const router = useRouter()
-const username = sessionStorage.getItem('username') || 'user'
+const username = sessionStorage.getItem('username') || localStorage.getItem('username') || 'user'
 const drawerVisible = ref(false)
 
 const menus = [
@@ -129,6 +129,9 @@ const handleCommand = async (command) => {
     cancelButtonText: '取消'
   })
   sessionStorage.clear()
+  localStorage.removeItem('token')
+  localStorage.removeItem('role')
+  localStorage.removeItem('username')
   router.push('/login')
 }
 </script>
