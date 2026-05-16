@@ -40,25 +40,32 @@ def get_llm_client(settings):
 
 
 def call_llm(prompt):
+    """调用大模型生成回答。
+
+    Args:
+        prompt: 消息列表 [{"role": "system", "content": ...}, {"role": "user", "content": ...}]
+                或纯字符串（向后兼容）
+    """
     settings = get_llm_settings()
     if is_missing_api_key(settings["api_key"]):
         raise LLMClientError("BIGMODEL_API_KEY 未配置，请在 property_kb_backend/.env 中配置真实 Key")
+
+    # 兼容旧版字符串格式
+    if isinstance(prompt, str):
+        messages = [
+            {"role": "system", "content": "你是智慧物业知识库助手，只能基于用户提供的知识库内容回答。"},
+            {"role": "user", "content": prompt},
+        ]
+    else:
+        messages = prompt
 
     try:
         client = get_llm_client(settings)
         response = client.chat.completions.create(
             model=settings["model"],
-            messages=[
-                {
-                    "role": "system",
-                    "content": "你是智慧物业知识库助手，只能基于用户提供的知识库内容回答。",
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
+            messages=messages,
             temperature=0.2,
+            top_p=0.7,
             max_tokens=500,
             thinking={"type": "disable"},
         )
