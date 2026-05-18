@@ -66,8 +66,7 @@ def call_llm(prompt):
             messages=messages,
             temperature=0.2,
             top_p=0.7,
-            max_tokens=500,
-            thinking={"type": "disable"},
+            max_tokens=500
         )
         return response.choices[0].message.content
     except Exception as exc:
