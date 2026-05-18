@@ -173,7 +173,7 @@ watch(
 const QUESTION_MAX_LENGTH = 200
 
 const sendMessage = async (presetQuestion) => {
-  const question = (presetQuestion || inputValue.value).trim()
+  const question = (typeof presetQuestion === 'string' ? presetQuestion : inputValue.value).trim()
   if (!question) {
     ElMessage.warning('请输入咨询问题')
     return
@@ -442,7 +442,15 @@ onMounted(async () => {
 
 @media (max-width: 767px) {
   .chat-panel {
-    grid-template-rows: minmax(400px, calc(100vh - 180px));
+    height: calc(100dvh - 240px);
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .message-box {
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .side-panel {
