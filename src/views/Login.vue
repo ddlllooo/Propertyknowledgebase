@@ -177,7 +177,7 @@ const resetStep = ref(1)
 const resetUsername = ref('')
 const resetResult = ref({})
 const captchaImage = ref('')
-const rememberMe = ref(false)
+const rememberMe = ref(localStorage.getItem('rememberMe') === '1')
 
 const form = reactive({
   username: '',
@@ -267,7 +267,8 @@ const handleLogin = async () => {
   try {
     const response = await login({
       username: form.username,
-      password: form.password
+      password: form.password,
+      rememberMe: rememberMe.value
     })
     const userInfo = normalizeLoginResult(response)
 
@@ -275,6 +276,7 @@ const handleLogin = async () => {
     storage.setItem('token', userInfo.token)
     storage.setItem('role', userInfo.role)
     storage.setItem('username', userInfo.username)
+    localStorage.setItem('rememberMe', rememberMe.value ? '1' : '0')
 
     // 清理另一个 storage 避免冲突
     const other = rememberMe.value ? sessionStorage : localStorage

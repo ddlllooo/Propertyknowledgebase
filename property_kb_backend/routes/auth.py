@@ -3,9 +3,10 @@ import io
 import random
 import re
 import time
+from datetime import timedelta
 
 from captcha.image import ImageCaptcha
-from flask import Blueprint, request, session
+from flask import Blueprint, current_app, request, session
 from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import or_
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -135,7 +136,16 @@ def login():
     if user.status != "启用":
         return fail("用户已停用", 403)
 
-    token = create_access_token(identity=str(user.id))
+    remember_me = (request.json or {}).get("rememberMe", False)
+    if remember_me:
+        expires = current_app.config.get(
+            "JWT_REMEMBER_ME_TOKEN_EXPIRES", timedelta(days=30)
+        )
+    else:
+        expires = current_app.config.get(
+            "JWT_ACCESS_TOKEN_EXPIRES", timedelta(hours=12)
+        )
+    token = create_access_token(identity=str(user.id), expires_delta=expires)
 
     return success(
         {

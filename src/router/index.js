@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isTokenExpired } from '../utils/request'
+import { clearCache } from '../utils/cache'
 import Login from '../views/Login.vue'
 import UserLayout from '../layouts/UserLayout.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
@@ -24,7 +26,7 @@ const routes = [
       const token = sessionStorage.getItem('token') || localStorage.getItem('token')
       const role = sessionStorage.getItem('role') || localStorage.getItem('role')
 
-      if (!token) return '/login'
+      if (!token || isTokenExpired(token)) return '/login'
       if (role === 'admin') return '/admin/home'
       return '/user/home'
     }
@@ -154,6 +156,18 @@ router.beforeEach((to, _from, next) => {
   const token = sessionStorage.getItem('token') || localStorage.getItem('token')
   const role = sessionStorage.getItem('role') || localStorage.getItem('role')
 
+  if (token && isTokenExpired(token)) {
+    sessionStorage.clear()
+    const remember = localStorage.getItem('rememberMe') === '1'
+    if (!remember) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      localStorage.removeItem('username')
+    }
+    next('/login')
+    return
+  }
+
   if (to.path === '/login' && token) {
     next(role === 'admin' ? '/admin/home' : '/user/home')
     return
@@ -203,6 +217,12 @@ router.beforeEach((to, _from, next) => {
   }
 
   next()
+})
+
+router.afterEach((to, from) => {
+  if (to.path !== from.path) {
+    clearCache()
+  }
 })
 
 export default router

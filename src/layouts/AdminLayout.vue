@@ -11,7 +11,7 @@
         </span>
       </router-link>
 
-      <el-menu :default-active="route.path" router class="admin-menu">
+      <el-menu :default-active="route.path" router class="admin-menu" @select="handleMenuSelect">
         <el-menu-item v-for="item in menus" :key="item.path" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
           <span>{{ item.label }}</span>
@@ -44,7 +44,7 @@
       </el-header>
 
       <el-main class="admin-main">
-        <router-view />
+        <router-view :key="viewKey" />
       </el-main>
     </el-container>
 
@@ -67,7 +67,7 @@
           </span>
         </router-link>
       </template>
-      <el-menu :default-active="route.path" router class="drawer-menu">
+      <el-menu :default-active="route.path" router class="drawer-menu" @select="handleMenuSelect">
         <el-menu-item
           v-for="item in menus"
           :key="item.path"
@@ -88,10 +88,19 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { Setting, SwitchButton, Expand } from '@element-plus/icons-vue'
 import { isMobile } from '../composables/useBreakpoint'
+import { clearCache } from '../utils/cache'
 
 const route = useRoute()
 const router = useRouter()
 const drawerVisible = ref(false)
+const viewKey = ref(0)
+
+const handleMenuSelect = (path) => {
+  if (path === route.path) {
+    clearCache()
+    viewKey.value++
+  }
+}
 
 const adminName = sessionStorage.getItem('username') || localStorage.getItem('username') || 'admin'
 

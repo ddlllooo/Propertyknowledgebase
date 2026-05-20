@@ -1,6 +1,6 @@
 import request from '../utils/request'
 
-export const getPasswordResetList = (params) => request.get('/admin/password-reset/list', { params })
+export const getPasswordResetList = (params, config = {}) => request.get('/admin/password-reset/list', { params, ...config })
 
 export const adminResetPassword = (id) => request.post(`/admin/password-reset/reset/${id}`)
 

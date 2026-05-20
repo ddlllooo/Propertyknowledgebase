@@ -15,6 +15,15 @@ from utils.response import fail, success
 qa_bp = Blueprint("qa", __name__)
 
 
+def get_enabled_category_names():
+    return [
+        name
+        for (name,) in Category.query.with_entities(Category.name)
+        .filter(Category.status == "启用")
+        .all()
+    ]
+
+
 def get_positive_int(value, default):
     try:
         parsed = int(value)
@@ -37,6 +46,9 @@ def list_qa():
         query = query.filter(QaKnowledge.status == status)
     else:
         query = query.filter(QaKnowledge.status != "已停用")
+
+    enabled_names = get_enabled_category_names()
+    query = query.filter(QaKnowledge.category.in_(enabled_names))
 
     if keyword:
         pattern = f"%{keyword}%"
@@ -73,6 +85,9 @@ def qa_detail(qa_id):
     item = db.session.get(QaKnowledge, qa_id)
     if not item:
         return fail("问答不存在", 404)
+
+    if not Category.query.filter_by(name=item.category, status="启用").first():
+        return fail("该问答所属分类已停用", 403)
 
     item.view_count += 1
     db.session.commit()
@@ -120,6 +135,7 @@ def home_summary():
             func.count(QaKnowledge.id).label("count"),
         )
         .filter(QaKnowledge.status != "已停用")
+        .filter(QaKnowledge.category.in_(get_enabled_category_names()))
         .group_by(QaKnowledge.category)
         .order_by(func.count(QaKnowledge.id).desc(), QaKnowledge.category.asc())
         .all()
@@ -156,7 +172,8 @@ def home_summary():
     return success(
         {
             "knowledgeCount": QaKnowledge.query.filter(
-                QaKnowledge.status != "已停用"
+                QaKnowledge.status != "已停用",
+                QaKnowledge.category.in_(get_enabled_category_names()),
             ).count(),
             "todayConsultCount": ChatLog.query.filter(
                 ChatLog.created_at >= start,

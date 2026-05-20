@@ -229,7 +229,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { useDialogWidth } from '../../composables/useDialogWidth'
@@ -677,6 +677,10 @@ const handleRebuildVector = async () => {
 onMounted(async () => {
   await Promise.all([fetchCategories(), fetchQaRecords(), fetchQaStats(), fetchKeywordOptions()])
 })
+
+onBeforeUnmount(() => {
+  clearTimeout(keywordTimer)
+})
 </script>
 
 <style scoped>
@@ -800,7 +804,7 @@ onMounted(async () => {
 .table-card {
   padding: 16px;
   border-radius: 22px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .pagination-wrap {

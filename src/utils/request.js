@@ -9,12 +9,25 @@ const request = axios.create({
 })
 
 const redirectToLogin = () => {
+  const remember = localStorage.getItem('rememberMe') === '1'
   sessionStorage.clear()
-  localStorage.removeItem('token')
-  localStorage.removeItem('role')
-  localStorage.removeItem('username')
+  if (!remember) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    localStorage.removeItem('username')
+  }
   if (window.location.pathname !== '/login') {
     window.location.href = '/login'
+  }
+}
+
+export function isTokenExpired(token) {
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
   }
 }
 

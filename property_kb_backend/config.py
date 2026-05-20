@@ -31,3 +31,4 @@ class Config:
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173")
 
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=12)
+    JWT_REMEMBER_ME_TOKEN_EXPIRES = timedelta(days=30)

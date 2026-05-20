@@ -218,7 +218,9 @@ const renderTrendChart = async () => {
   await nextTick()
   if (!trendChartRef.value) return
 
-  trendChart = echarts.init(trendChartRef.value)
+  if (!trendChart) {
+    trendChart = echarts.init(trendChartRef.value)
+  }
   trendChart.setOption({
     grid: {
       top: 28,

@@ -1,3 +1,4 @@
+from models.category import Category
 from models.qa import QaKnowledge
 
 
@@ -28,7 +29,10 @@ def build_document_from_qa(qa):
 
 def load_published_qa_documents():
     records = (
-        QaKnowledge.query.filter_by(status="已发布")
+        QaKnowledge.query
+        .join(Category, QaKnowledge.category == Category.name)
+        .filter(QaKnowledge.status == "已发布")
+        .filter(Category.status == "启用")
         .order_by(QaKnowledge.id.asc())
         .all()
     )

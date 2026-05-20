@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from extensions.db import db
 from models.category import Category
+from rag.faiss_store import build_faiss_index
 from services.category_service import (
     count_category_questions,
     refresh_category_question_count,
@@ -88,11 +89,17 @@ def update_category(category_id):
     if "sortOrder" in payload:
         category.sort_order = get_sort_order(payload.get("sortOrder"))
 
+    status_changed = False
     if "status" in payload:
-        category.status = (payload.get("status") or "").strip()
+        new_status = (payload.get("status") or "").strip()
+        status_changed = new_status != category.status
+        category.status = new_status
 
     refresh_category_question_count(category.name)
     db.session.commit()
+
+    if status_changed:
+        build_faiss_index()
 
     return success(category.to_dict(), "修改成功")
 
@@ -104,7 +111,11 @@ def delete_category(category_id):
     if not category:
         return fail("分类不存在", 404)
 
+    status_changed = category.status != "停用"
     category.status = "停用"
     db.session.commit()
+
+    if status_changed:
+        build_faiss_index()
 
     return success(category.to_dict(), "删除成功")

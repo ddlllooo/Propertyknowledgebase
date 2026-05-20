@@ -211,7 +211,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useDialogWidth } from '../../composables/useDialogWidth'
@@ -429,6 +429,10 @@ const fetchKeywordOptions = async () => {
 
 onMounted(async () => {
   await Promise.all([fetchCategories(), fetchLogs(), fetchStats(), fetchKeywordOptions()])
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(keywordTimer)
 })
 </script>
 

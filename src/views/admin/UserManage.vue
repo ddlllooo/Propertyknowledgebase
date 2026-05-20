@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { useDialogWidth } from '../../composables/useDialogWidth'
@@ -337,6 +337,10 @@ const batchDisable = async () => {
 }
 
 onMounted(fetchUsers)
+
+onBeforeUnmount(() => {
+  clearTimeout(keywordTimer)
+})
 </script>
 
 <style scoped>

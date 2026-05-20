@@ -10,6 +10,41 @@ from rag.llm_client import LLMClientError, call_llm
 from rag.prompt import FALLBACK_ANSWER, build_prompt
 
 
+MISS_PATTERNS = [
+    "知识库中没有",
+    "知识库中暂无",
+    "知识库中未收录",
+    "知识库未找到",
+    "知识库中没有相关",
+    "知识库暂无相关",
+    "暂无相关规定",
+    "暂无相关记录",
+    "暂无相关信息",
+    "未找到相关",
+    "没有相关信息",
+    "没有相关记录",
+    "没有相关规定",
+    "建议您联系",
+    "建议联系物业前台",
+    "请联系物业前台",
+    "请联系人工客服",
+    "建议联系人工",
+    "无法从知识库中",
+    "不确定",
+    "不太确定",
+]
+
+
+def is_llm_miss(answer: str) -> bool:
+    if not answer:
+        return True
+    text = answer.strip()
+    for pattern in MISS_PATTERNS:
+        if pattern in text:
+            return True
+    return False
+
+
 def distance_to_hit_similarity(distance):
     ratio = min(max(distance / RAG_MAX_DISTANCE_THRESHOLD, 0), 1)
     return round(0.95 - ratio * 0.2, 2)
@@ -121,7 +156,20 @@ def rag_answer(question, current_user):
 
     category = metadata.get("category") or "未分类"
     matched_question = metadata.get("question") or ""
-    similarity = distance_to_hit_similarity(top_distance)
+
+    # LLM 回答内容二次判断：检索命中但回答实质为"无答案"时，降级为未命中
+    llm_miss = llm_used and is_llm_miss(answer)
+    if llm_miss:
+        hit_status = "未命中"
+        need_human = True
+        similarity = distance_to_miss_similarity(top_distance)
+        rag_trace = "检索命中但回答内容表明知识库无相关内容"
+    else:
+        hit_status = "已命中"
+        need_human = False
+        similarity = distance_to_hit_similarity(top_distance)
+        rag_trace = "质谱大模型调用成功" if llm_used else llm_error
+
     response_time = round(time.perf_counter() - started_at, 2)
     chat_log = save_chat_log(
         user=current_user,
@@ -129,8 +177,8 @@ def rag_answer(question, current_user):
         answer=answer,
         category=category,
         similarity=similarity,
-        hit_status="已命中",
-        need_human=False,
+        hit_status=hit_status,
+        need_human=need_human,
         response_time=response_time,
     )
 
@@ -139,11 +187,11 @@ def rag_answer(question, current_user):
         "category": category,
         "matchedQuestion": matched_question,
         "similarity": similarity,
-        "hitStatus": "已命中",
-        "needHuman": False,
+        "hitStatus": hit_status,
+        "needHuman": need_human,
         "chatLogId": chat_log.id,
         "llmUsed": llm_used,
         "answerSource": "智能客服",
         "generationMode": generation_mode,
-        "ragTrace": "质谱大模型调用成功" if llm_used else llm_error,
+        "ragTrace": rag_trace,
     }

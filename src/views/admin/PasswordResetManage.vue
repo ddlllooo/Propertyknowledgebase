@@ -149,7 +149,7 @@ const statusTagType = (status) => {
 
 const refreshList = async () => {
   try {
-    const res = await getPasswordResetList({ page: 1, pageSize: 200 })
+    const res = await getPasswordResetList({ page: 1, pageSize: 200 }, { _noCache: true })
     list.value = res?.data?.list || []
   } catch {
     ElMessage.error('加载失败')
