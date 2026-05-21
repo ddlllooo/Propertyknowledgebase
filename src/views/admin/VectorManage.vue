@@ -170,6 +170,41 @@ const handleRebuild = async () => {
     ElMessage.success('向量库重建成功')
   } catch (error) {
     await loadVectorStatus()
+
+    // 解析诊断信息
+    const errorMsg = error?.response?.data?.message || error?.message || '未知错误'
+    let diagnosticInfo = ''
+
+    if (errorMsg.includes('诊断信息')) {
+      // 提取诊断信息部分
+      const diagnosticMatch = errorMsg.match(/诊断信息: ({.*})/)
+      if (diagnosticMatch) {
+        try {
+          const diagnostic = JSON.parse(diagnosticMatch[1])
+          diagnosticInfo = `
+            <div style="text-align: left; line-height: 1.8;">
+              <p><strong>错误类型：</strong>${diagnostic.error_type || '未知'}</p>
+              <p><strong>当前模型：</strong>${diagnostic.model_name || '未知'}</p>
+              <p><strong>API密钥状态：</strong>${diagnostic.api_key_configured ? '已配置' : '未配置'}</p>
+              <p style="margin-top: 12px;"><strong>建议解决方案：</strong></p>
+              <ul style="margin: 8px 0; padding-left: 20px;">
+                ${(diagnostic.suggestions || []).map(s => `<li>${s}</li>`).join('')}
+              </ul>
+            </div>
+          `
+        } catch (e) {
+          // JSON解析失败，忽略
+        }
+      }
+    }
+
+    if (diagnosticInfo) {
+      ElMessageBox.alert(diagnosticInfo, '向量库重建失败', {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '我知道了',
+        type: 'error'
+      })
+    }
   } finally {
     loadingInstance.close()
     rebuildLoading.value = false

@@ -1,7 +1,7 @@
 import shutil
 import threading
 
-from rag.config import FAISS_INDEX_PATH, RAG_TOP_K
+from rag.config import FAISS_INDEX_PATH, RAG_TOP_K, EMBEDDING_MODEL_NAME, BIGMODEL_API_KEY
 from rag.document_builder import load_published_qa_documents
 from rag.embeddings import get_embedding_model
 
@@ -31,14 +31,32 @@ def build_faiss_index():
     FAISS_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
     from langchain_community.vectorstores import FAISS
 
-    embedding_model = get_embedding_model()
-    vector_store = FAISS.from_documents(documents, embedding_model)
-    vector_store.save_local(str(FAISS_INDEX_PATH))
+    try:
+        embedding_model = get_embedding_model()
+        vector_store = FAISS.from_documents(documents, embedding_model)
+        vector_store.save_local(str(FAISS_INDEX_PATH))
 
-    with _cache_lock:
-        _cached_vector_store = vector_store
+        with _cache_lock:
+            _cached_vector_store = vector_store
 
-    return vector_store
+        return vector_store
+    except Exception as e:
+        error_msg = str(e)
+        # 检查是否是API相关错误
+        if "1211" in error_msg or "模型不存在" in error_msg:
+            diagnostic = {
+                "error_type": "API_MODEL_ERROR",
+                "model_name": EMBEDDING_MODEL_NAME,
+                "api_key_configured": bool(BIGMODEL_API_KEY),
+                "api_key_length": len(BIGMODEL_API_KEY) if BIGMODEL_API_KEY else 0,
+                "suggestions": [
+                    "检查智谱AI账户是否有embedding模型权限",
+                    "确认API密钥是否有效且未过期",
+                    "尝试将 EMBEDDING_MODEL_NAME 改为 embedding-2"
+                ]
+            }
+            raise FaissIndexError(f"向量库重建失败: {error_msg}\n诊断信息: {diagnostic}") from e
+        raise FaissIndexError(f"向量库重建失败: {error_msg}") from e
 
 
 def load_faiss_index():

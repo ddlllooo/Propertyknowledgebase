@@ -4,6 +4,7 @@ from flask import Blueprint
 
 from models.qa import QaKnowledge
 from rag.config import EMBEDDING_MODEL_NAME, FAISS_INDEX_PATH
+from rag.embeddings import get_embedding_model
 from rag.faiss_store import FaissIndexError, build_faiss_index, faiss_index_exists
 from rag.llm_client import get_llm_health
 from utils.auth import admin_required
@@ -83,3 +84,31 @@ def rebuild():
         return fail(f"向量库重建失败：{exc}")
 
     return success(get_vector_status(), "向量库重建成功")
+
+
+@vector_bp.get("/check-api")
+@admin_required
+def check_api():
+    """验证智谱AI API配置是否正确"""
+    try:
+        # 测试embedding模型
+        embedding_model = get_embedding_model()
+        test_result = embedding_model.embed_query("测试")
+
+        return success({
+            "status": "ok",
+            "model": EMBEDDING_MODEL_NAME,
+            "dimensions": len(test_result),
+            "message": "API配置正确，embedding模型可正常访问"
+        })
+    except Exception as e:
+        return fail({
+            "status": "error",
+            "error": str(e),
+            "model": EMBEDDING_MODEL_NAME,
+            "suggestions": [
+                "检查 BIGMODEL_API_KEY 是否正确配置",
+                "确认智谱AI账户是否有embedding模型权限",
+                "尝试将 EMBEDDING_MODEL_NAME 改为 embedding-2"
+            ]
+        }, 500)

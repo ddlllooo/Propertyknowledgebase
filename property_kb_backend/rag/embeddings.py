@@ -4,9 +4,18 @@ from langchain_core.embeddings import Embeddings
 
 from rag.config import BIGMODEL_API_KEY, EMBEDDING_DIMENSIONS, EMBEDDING_MODEL_NAME
 
+# 支持的embedding模型列表
+SUPPORTED_EMBEDDING_MODELS = ["embedding-2", "embedding-3"]
+
 
 class ZhipuEmbeddings(Embeddings):
     def __init__(self, api_key, model, dimensions=None):
+        if model not in SUPPORTED_EMBEDDING_MODELS:
+            raise ValueError(
+                f"不支持的embedding模型: {model}，"
+                f"支持的模型: {', '.join(SUPPORTED_EMBEDDING_MODELS)}"
+            )
+
         from zai import ZhipuAiClient
 
         self._client = ZhipuAiClient(api_key=api_key)
