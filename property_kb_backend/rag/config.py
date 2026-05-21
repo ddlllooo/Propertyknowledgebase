@@ -35,8 +35,9 @@ BIGMODEL_MODEL = os.getenv("BIGMODEL_MODEL", "GLM-4.5-Air")
 
 EMBEDDING_MODEL_NAME = os.getenv(
     "EMBEDDING_MODEL_NAME",
-    "BAAI/bge-small-zh-v1.5",
+    "embedding-3",
 )
+EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
 
 FAISS_INDEX_DIR = os.getenv("FAISS_INDEX_DIR", "storage/faiss_index")
 FAISS_INDEX_PATH = BASE_DIR / FAISS_INDEX_DIR

@@ -30,7 +30,8 @@ All env vars are centralized in `property_kb_backend/.env` (loaded by both `conf
 | `BIGMODEL_API_KEY` | — | ZhipuAI API key |
 | `BIGMODEL_BASE_URL` | `https://open.bigmodel.cn/api/paas/v4` | LLM API base URL |
 | `BIGMODEL_MODEL` | `GLM-4.5-Air` | LLM model name |
-| `EMBEDDING_MODEL_NAME` | `BAAI/bge-small-zh-v1.5` | HuggingFace embedding model |
+| `EMBEDDING_MODEL_NAME` | `embedding-3` | 智谱 embedding 模型 |
+| `EMBEDDING_DIMENSIONS` | `1024` | embedding 向量维度 |
 | `HF_CACHE_DIR` | `storage/hf_cache` | HuggingFace model cache path |
 | `FAISS_INDEX_DIR` | `storage/faiss_index` | FAISS index storage path |
 | `RAG_TOP_K` | `3` | Number of similar docs to retrieve |

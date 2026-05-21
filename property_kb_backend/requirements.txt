@@ -11,6 +11,7 @@ langchain-huggingface
 sentence-transformers
 faiss-cpu
 openai
+zai-sdk
 python-dotenv
 cryptography
 Flask-Limiter

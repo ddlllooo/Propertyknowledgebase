@@ -1,30 +1,38 @@
 from threading import RLock
-from pathlib import Path
 
-from rag.config import EMBEDDING_MODEL_NAME, SENTENCE_TRANSFORMERS_CACHE_PATH
+from langchain_core.embeddings import Embeddings
+
+from rag.config import BIGMODEL_API_KEY, EMBEDDING_DIMENSIONS, EMBEDDING_MODEL_NAME
+
+
+class ZhipuEmbeddings(Embeddings):
+    def __init__(self, api_key, model, dimensions=None):
+        from zai import ZhipuAiClient
+
+        self._client = ZhipuAiClient(api_key=api_key)
+        self._model = model
+        self._dimensions = dimensions
+
+    def embed_documents(self, texts):
+        """批量生成文档向量，智谱API单次最多25条，自动分批"""
+        all_embeddings = []
+        batch_size = 25
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            kwargs = {"model": self._model, "input": batch}
+            if self._dimensions:
+                kwargs["dimensions"] = self._dimensions
+            resp = self._client.embeddings.create(**kwargs)
+            all_embeddings.extend([d.embedding for d in resp.data])
+        return all_embeddings
+
+    def embed_query(self, text):
+        """生成单条查询向量"""
+        return self.embed_documents([text])[0]
 
 
 _embedding_model = None
 _embedding_lock = RLock()
-
-
-def get_cached_embedding_model_path():
-    model_path = Path(EMBEDDING_MODEL_NAME)
-    if model_path.exists():
-        return model_path
-
-    try:
-        from huggingface_hub import snapshot_download
-
-        return Path(
-            snapshot_download(
-                EMBEDDING_MODEL_NAME,
-                cache_dir=str(SENTENCE_TRANSFORMERS_CACHE_PATH),
-                local_files_only=True,
-            )
-        )
-    except Exception:
-        return None
 
 
 def get_embedding_model():
@@ -35,15 +43,10 @@ def get_embedding_model():
 
     with _embedding_lock:
         if _embedding_model is None:
-            from langchain_huggingface import HuggingFaceEmbeddings
-
-            SENTENCE_TRANSFORMERS_CACHE_PATH.mkdir(parents=True, exist_ok=True)
-            cached_model_path = get_cached_embedding_model_path()
-            _embedding_model = HuggingFaceEmbeddings(
-                model_name=str(cached_model_path or EMBEDDING_MODEL_NAME),
-                cache_folder=str(SENTENCE_TRANSFORMERS_CACHE_PATH),
-                model_kwargs={"device": "cpu"},
-                encode_kwargs={"normalize_embeddings": True},
+            _embedding_model = ZhipuEmbeddings(
+                api_key=BIGMODEL_API_KEY,
+                model=EMBEDDING_MODEL_NAME,
+                dimensions=EMBEDDING_DIMENSIONS,
             )
 
     return _embedding_model
