@@ -186,6 +186,7 @@ onMounted(async () => {
 .home-page {
   display: grid;
   gap: 24px;
+  overflow-x: hidden;
 }
 
 .hero {
@@ -457,7 +458,7 @@ onMounted(async () => {
     position: absolute;
     right: clamp(18px, 5vw, 48px);
     bottom: 24px;
-    width: 330px;
+    width: clamp(200px, 40vw, 330px);
     height: 230px;
     min-height: 230px;
   }
@@ -470,8 +471,8 @@ onMounted(async () => {
   .ring {
     right: 16px;
     bottom: 0;
-    width: 170px;
-    height: 170px;
+    width: clamp(130px, 20vw, 170px);
+    height: clamp(130px, 20vw, 170px);
   }
 
   .stats-grid {
@@ -483,6 +484,21 @@ onMounted(async () => {
   .hero {
     grid-template-columns: 1fr;
     padding-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .hero h1 {
+    font-size: 24px;
+    margin: 18px 0 14px;
+  }
+
+  .hero p {
+    font-size: 15px;
+  }
+
+  .hero-actions {
+    margin-top: 22px;
+    gap: 10px;
   }
 
   .hero-visual {
@@ -503,26 +519,95 @@ onMounted(async () => {
     right: auto;
     width: 100%;
     justify-content: center;
+    font-size: 14px;
   }
 
   .ring {
     position: relative;
     right: auto;
     bottom: auto;
-    width: 140px;
-    height: 140px;
+    width: 120px;
+    height: 120px;
+  }
+
+  .ring strong {
+    font-size: 24px;
+  }
+
+  .ring small {
+    font-size: 12px;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .stat-card strong {
+    font-size: 22px;
+  }
+
+  .stat-card span {
+    font-size: 13px;
   }
 
   .entry-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .entry-card {
+    min-height: 140px;
+    padding: 20px;
+  }
+
+  .entry-card h3 {
+    font-size: 18px;
+    margin: 16px 0 6px;
+  }
+
+  .entry-card p {
+    font-size: 14px;
   }
 
   .home-bottom {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .section-title h2 {
+    font-size: 18px;
+  }
+
+  .hot-list button {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .category-cloud :deep(.el-tag) {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .category-note {
+    font-size: 13px;
+    padding: 14px;
   }
 }
 </style>
