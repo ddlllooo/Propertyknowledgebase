@@ -43,6 +43,11 @@
       <div class="forgot-entry">
         <button type="button" @click="openResetDialog">忘记密码？</button>
       </div>
+      <div class="guest-entry">
+        <el-button class="guest-button" :loading="guestLoading" @click="handleGuestLogin">
+          游客体验
+        </el-button>
+      </div>
     </section>
 
     <el-dialog v-model="registerVisible" title="注册账号" :width="registerDialogWidth" @closed="resetRegisterForm">
@@ -163,12 +168,13 @@ import { useDialogWidth } from '../composables/useDialogWidth'
 const registerDialogWidth = useDialogWidth(460)
 const resetDialogWidth = useDialogWidth(460)
 import { Connection, Key, Lock, Message, User } from '@element-plus/icons-vue'
-import { login, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
+import { login, guestLogin, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
 
 const router = useRouter()
 const loginFormRef = ref()
 const registerFormRef = ref()
 const loading = ref(false)
+const guestLoading = ref(false)
 const registerLoading = ref(false)
 const registerVisible = ref(false)
 const resetVisible = ref(false)
@@ -297,6 +303,40 @@ const handleLogin = async () => {
     ElMessage.error(getErrorMessage(error, '登录失败'))
   } finally {
     loading.value = false
+  }
+}
+
+const generateGuestId = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+const handleGuestLogin = async () => {
+  guestLoading.value = true
+  try {
+    const guestId = generateGuestId()
+    const response = await guestLogin({ guestId })
+    const data = response?.data || {}
+
+    sessionStorage.setItem('token', data.token)
+    sessionStorage.setItem('role', 'guest')
+    sessionStorage.setItem('username', '游客')
+    sessionStorage.setItem('guestId', data.guestId || guestId)
+
+    // 清理 localStorage 避免冲突
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    localStorage.removeItem('username')
+
+    ElMessage.success('游客登录成功')
+    router.push('/user/home')
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '游客登录失败'))
+  } finally {
+    guestLoading.value = false
   }
 }
 
@@ -533,6 +573,27 @@ const copyTempPassword = () => {
 
 .forgot-entry button:hover {
   color: #0e6fff;
+}
+
+.guest-entry {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.guest-button {
+  width: 100%;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid #d8e5ef;
+  color: #5a6f85;
+  background: #fff;
+  font-weight: 600;
+}
+
+.guest-button:hover {
+  color: #1178ff;
+  border-color: #b3d8ff;
+  background: #f0f7ff;
 }
 
 .temp-password-box {

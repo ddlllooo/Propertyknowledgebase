@@ -8,6 +8,9 @@
         <h2>我是智慧物业助手</h2>
         <p>可以帮您快速查询缴费、报修、停车、装修等问题。</p>
       </div>
+      <div v-if="isGuest" class="guest-remaining">
+        <span>今日剩余 {{ guestRemaining }} 次</span>
+      </div>
     </section>
 
     <section class="chat-layout">
@@ -30,7 +33,7 @@
                 <span>参考问题：{{ message.meta.reference }}</span>
                 <span>相似度：{{ message.meta.similarity }}</span>
               </div>
-              <div v-if="message.canFeedback" class="feedback-actions">
+              <div v-if="message.canFeedback && !isGuest" class="feedback-actions">
                 <el-button size="small" text type="success" @click="openFeedback('有帮助', message)">
                   有帮助
                 </el-button>
@@ -38,6 +41,9 @@
                 <el-button size="small" text type="warning" @click="openFeedback('需要人工处理', message)">
                   需要人工处理
                 </el-button>
+              </div>
+              <div v-if="isGuest && message.role === 'ai' && message.canFeedback !== false" class="guest-hint">
+                <span>登录后可提交反馈和查看咨询记录</span>
               </div>
             </div>
           </div>
@@ -49,13 +55,21 @@
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 3 }"
             resize="none"
-            :disabled="sending"
-            placeholder="请输入您的物业服务问题"
+            :disabled="sending || (isGuest && guestRemaining <= 0)"
+            :placeholder="isGuest && guestRemaining <= 0 ? '游客每日问答次数已达上限' : '请输入您的物业服务问题'"
             maxlength="200"
             show-word-limit
             @keydown="onTextareaKeydown"
           />
-          <el-button type="primary" :icon="Promotion" :loading="sending" @click="sendMessage">发送</el-button>
+          <el-button
+            type="primary"
+            :icon="Promotion"
+            :loading="sending"
+            :disabled="isGuest && guestRemaining <= 0"
+            @click="sendMessage"
+          >
+            发送
+          </el-button>
         </div>
       </div>
 
@@ -106,18 +120,25 @@ import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Promotion } from '@element-plus/icons-vue'
 import { useDialogWidth } from '../../composables/useDialogWidth'
-import { sendQuestion } from '../../api/chat'
+import { sendQuestion, sendGuestQuestion } from '../../api/chat'
 import { createFeedback } from '../../api/feedback'
 
 const feedbackDialogWidth = useDialogWidth(460)
 
 const CHAT_SESSION_KEY = 'userChatAgentMessages'
+const GUEST_COUNT_KEY = 'guestChatCount'
+const GUEST_DATE_KEY = 'guestChatDate'
+const GUEST_DAILY_LIMIT = 10
+
+const role = sessionStorage.getItem('role') || localStorage.getItem('role') || 'user'
+const isGuest = role === 'guest'
 
 const messageBoxRef = ref()
 const inputValue = ref('')
 const feedbackVisible = ref(false)
 const activeFeedbackMessage = ref(null)
 const sending = ref(false)
+const guestRemaining = ref(GUEST_DAILY_LIMIT)
 const feedbackForm = reactive({
   type: '',
   content: ''
@@ -140,6 +161,28 @@ const recommendedQuestions = [
   '临时车辆如何进入小区？',
   '装修施工时间有什么规定？'
 ]
+
+const getGuestTodayKey = () => new Date().toISOString().slice(0, 10)
+
+const initGuestCount = () => {
+  if (!isGuest) return
+  const savedDate = localStorage.getItem(GUEST_DATE_KEY)
+  const today = getGuestTodayKey()
+  if (savedDate !== today) {
+    localStorage.setItem(GUEST_DATE_KEY, today)
+    localStorage.setItem(GUEST_COUNT_KEY, '0')
+    guestRemaining.value = GUEST_DAILY_LIMIT
+  } else {
+    const used = parseInt(localStorage.getItem(GUEST_COUNT_KEY) || '0', 10)
+    guestRemaining.value = Math.max(0, GUEST_DAILY_LIMIT - used)
+  }
+}
+
+const incrementGuestCount = () => {
+  const used = parseInt(localStorage.getItem(GUEST_COUNT_KEY) || '0', 10) + 1
+  localStorage.setItem(GUEST_COUNT_KEY, String(used))
+  guestRemaining.value = Math.max(0, GUEST_DAILY_LIMIT - used)
+}
 
 const scrollToBottom = async () => {
   await nextTick()
@@ -183,6 +226,11 @@ const sendMessage = async (presetQuestion) => {
     return
   }
 
+  if (isGuest && guestRemaining.value <= 0) {
+    ElMessage.warning('游客每日问答次数已达上限，请登录后继续使用')
+    return
+  }
+
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -193,14 +241,23 @@ const sendMessage = async (presetQuestion) => {
 
   sending.value = true
   try {
-    const response = await sendQuestion({ question })
+    const apiFn = isGuest ? sendGuestQuestion : sendQuestion
+    const response = await apiFn({ question })
     const answer = response.data
+
+    if (isGuest) {
+      incrementGuestCount()
+      if (answer.remainingCount !== undefined) {
+        guestRemaining.value = answer.remainingCount
+      }
+    }
+
     messages.value.push({
       id: Date.now() + 1,
       role: 'ai',
       content: answer.answer,
       chatLogId: answer.chatLogId,
-      canFeedback: Boolean(answer.chatLogId),
+      canFeedback: !isGuest && Boolean(answer.chatLogId),
       meta: {
         category: answer.category,
         answerSource: answer.answerSource || '知识库',
@@ -210,7 +267,12 @@ const sendMessage = async (presetQuestion) => {
     })
     await scrollToBottom()
   } catch (error) {
-    ElMessage.error('问题发送失败')
+    const msg = error?.response?.data?.message
+    if (msg) {
+      ElMessage.error(msg)
+    } else {
+      ElMessage.error('问题发送失败')
+    }
   } finally {
     sending.value = false
   }
@@ -250,6 +312,7 @@ const submitFeedback = async () => {
 }
 
 onMounted(async () => {
+  initGuestCount()
   loadCachedMessages()
   await scrollToBottom()
 })
@@ -292,6 +355,17 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.86);
 }
 
+.guest-remaining {
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .chat-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -320,10 +394,12 @@ onMounted(async () => {
 }
 
 .ai-avatar {
+  flex-shrink: 0;
   background: linear-gradient(135deg, #1178ff, #13bea7);
 }
 
 .user-avatar {
+  flex-shrink: 0;
   background: #7c8da5;
 }
 
@@ -359,6 +435,12 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.guest-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .input-bar {

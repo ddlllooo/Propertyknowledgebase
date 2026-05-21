@@ -57,7 +57,7 @@ def distance_to_miss_similarity(distance=None):
     return round(min(0.55, 0.35 + ratio * 0.1), 2)
 
 
-def save_chat_log(user, question, answer, category, similarity, hit_status, need_human, response_time):
+def save_chat_log(user, question, answer, category, similarity, hit_status, need_human, response_time, is_guest=False):
     chat_log = ChatLog(
         user_id=user.id,
         username=user.username,
@@ -67,6 +67,7 @@ def save_chat_log(user, question, answer, category, similarity, hit_status, need
         similarity=similarity,
         hit_status=hit_status,
         need_human=need_human,
+        is_guest=is_guest,
         response_time=response_time,
         created_at=datetime.now(),
     )
@@ -75,7 +76,7 @@ def save_chat_log(user, question, answer, category, similarity, hit_status, need
     return chat_log
 
 
-def build_miss_result(user, question, started_at, distance=None, reason="未检索到可用知识"):
+def build_miss_result(user, question, started_at, distance=None, reason="未检索到可用知识", is_guest=False):
     response_time = round(time.perf_counter() - started_at, 2)
     similarity = distance_to_miss_similarity(distance)
     chat_log = save_chat_log(
@@ -87,6 +88,7 @@ def build_miss_result(user, question, started_at, distance=None, reason="未检�
         hit_status="未命中",
         need_human=True,
         response_time=response_time,
+        is_guest=is_guest,
     )
 
     return {
@@ -104,7 +106,7 @@ def build_miss_result(user, question, started_at, distance=None, reason="未检�
     }
 
 
-def rag_answer(question, current_user):
+def rag_answer(question, current_user, is_guest=False):
     question = (question or "").strip()
     if not question:
         raise ValueError("问题不能为空")
@@ -114,10 +116,10 @@ def rag_answer(question, current_user):
     try:
         search_results = search_similar_docs(question, k=RAG_TOP_K)
     except (FaissIndexError, ValueError) as exc:
-        return build_miss_result(current_user, question, started_at, reason=str(exc))
+        return build_miss_result(current_user, question, started_at, reason=str(exc), is_guest=is_guest)
 
     if not search_results:
-        return build_miss_result(current_user, question, started_at)
+        return build_miss_result(current_user, question, started_at, is_guest=is_guest)
 
     top_doc, top_distance = search_results[0]
     top_distance = float(top_distance)
@@ -129,6 +131,7 @@ def rag_answer(question, current_user):
             started_at,
             top_distance,
             reason="检索结果相似度低于命中阈值",
+            is_guest=is_guest,
         )
 
     context = "\n\n---\n\n".join(doc.page_content for doc, _score in search_results)
@@ -180,6 +183,7 @@ def rag_answer(question, current_user):
         hit_status=hit_status,
         need_human=need_human,
         response_time=response_time,
+        is_guest=is_guest,
     )
 
     return {

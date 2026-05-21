@@ -3,6 +3,7 @@ import io
 import random
 import re
 import time
+import uuid
 from datetime import timedelta
 
 from captcha.image import ImageCaptcha
@@ -157,6 +158,29 @@ def login():
             "mustChangePassword": user.must_change_password,
         },
         "登录成功",
+    )
+
+
+@auth_bp.post("/guest")
+@limiter.limit("20/minute")
+def guest_login():
+    payload = request.get_json(silent=True) or {}
+    guest_id = (payload.get("guestId") or "").strip() or str(uuid.uuid4())
+
+    token = create_access_token(
+        identity=f"guest-{guest_id}",
+        additional_claims={"role": "guest", "guest_id": guest_id},
+        expires_delta=timedelta(hours=2),
+    )
+
+    return success(
+        {
+            "token": token,
+            "role": "guest",
+            "username": "游客",
+            "guestId": guest_id,
+        },
+        "游客登录成功",
     )
 
 

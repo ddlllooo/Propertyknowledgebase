@@ -19,6 +19,8 @@ import Dashboard from '../views/admin/Dashboard.vue'
 import VectorManage from '../views/admin/VectorManage.vue'
 import UserManage from '../views/admin/UserManage.vue'
 
+const GUEST_ALLOWED_PATHS = ['/user/home', '/user/knowledge', '/user/chat']
+
 const routes = [
   {
     path: '/',
@@ -169,7 +171,8 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.path === '/login' && token) {
-    next(role === 'admin' ? '/admin/home' : '/user/home')
+    if (role === 'admin') next('/admin/home')
+    else next('/user/home')
     return
   }
 
@@ -188,13 +191,8 @@ router.beforeEach((to, _from, next) => {
       return
     }
 
-    if (role === 'user') {
-      next('/user/home')
-      return
-    }
-
     if (role !== 'admin') {
-      next('/login')
+      next(role === 'guest' ? '/user/home' : '/login')
       return
     }
   }
@@ -210,8 +208,8 @@ router.beforeEach((to, _from, next) => {
       return
     }
 
-    if (role !== 'user') {
-      next('/login')
+    if (role === 'guest' && !GUEST_ALLOWED_PATHS.includes(to.path)) {
+      next('/user/home')
       return
     }
   }

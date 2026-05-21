@@ -29,7 +29,8 @@
           </div>
         </div>
         <div class="top-actions">
-          <el-tag effect="light" round>在线服务</el-tag>
+          <el-tag v-if="isGuest" type="warning" effect="light" round>游客模式</el-tag>
+          <el-tag v-else effect="light" round>在线服务</el-tag>
           <el-dropdown @command="handleCommand">
             <button class="user-button">
               <el-avatar :size="34" class="avatar">{{ username.slice(0, 1).toUpperCase() }}</el-avatar>
@@ -108,16 +109,20 @@ import { isMobile } from '../composables/useBreakpoint'
 
 const route = useRoute()
 const router = useRouter()
+const role = sessionStorage.getItem('role') || localStorage.getItem('role') || 'user'
 const username = sessionStorage.getItem('username') || localStorage.getItem('username') || 'user'
+const isGuest = role === 'guest'
 const drawerVisible = ref(false)
 
-const menus = [
+const allMenus = [
   { label: '用户首页', path: '/user/home', icon: 'DataAnalysis' },
   { label: '在线知识库', path: '/user/knowledge', icon: 'Collection' },
   { label: '智能问答', path: '/user/chat', icon: 'ChatDotRound' },
   { label: '咨询记录', path: '/user/history', icon: 'Clock' },
   { label: '我的反馈', path: '/user/feedback', icon: 'EditPen' }
 ]
+
+const menus = computed(() => isGuest ? allMenus.slice(0, 3) : allMenus)
 
 const currentTitle = computed(() => route.meta.title || '智慧物业服务')
 

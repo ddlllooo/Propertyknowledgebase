@@ -4,6 +4,8 @@ export const register = (data) => request.post('/auth/register', data)
 
 export const login = (data) => request.post('/auth/login', data)
 
+export const guestLogin = (data) => request.post('/auth/guest', data)
+
 export const profile = () => request.get('/auth/profile')
 
 export const requestPasswordReset = (data) => request.post('/auth/password-reset/request', data)
