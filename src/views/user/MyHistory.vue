@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell history-page">
+  <div class="page-shell history-page" ref="pageRef">
     <section class="filter-card soft-card">
       <div>
         <h2>我的咨询记录</h2>
@@ -48,10 +48,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { gsap } from 'gsap'
 import { Search } from '@element-plus/icons-vue'
 import { getMyHistory } from '../../api/chat'
 import { getCategories } from '../../api/qa'
+
+const pageRef = ref(null)
+let ctx
 
 const keyword = ref('')
 const category = ref('全部')
@@ -92,7 +96,31 @@ const fetchData = async () => {
   }
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  await fetchData()
+
+  if (!pageRef.value) return
+  ctx = gsap.context(() => {
+    // 筛选卡片入场
+    gsap.from('.filter-card', { y: -30, opacity: 0, duration: 0.6, ease: 'power3.out', clearProps: 'all' })
+
+    // 时间线卡片入场
+    gsap.from('.timeline-card', { y: 30, opacity: 0, duration: 0.6, delay: 0.2, ease: 'power2.out', clearProps: 'all' })
+
+    // 历史记录项依次从左侧滑入
+    gsap.from('.el-timeline-item', { x: -40, opacity: 0, duration: 0.5, stagger: 0.1, delay: 0.4, ease: 'power2.out', clearProps: 'all' })
+  }, pageRef.value)
+})
+
+onUnmounted(() => {
+  ctx?.revert()
+})
+
+// 筛选条件变化时重新动画记录项
+watch([keyword, category, hitStatus], async () => {
+  await nextTick()
+  gsap.from('.el-timeline-item', { x: -30, opacity: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out', clearProps: 'all' })
+})
 </script>
 
 <style scoped>
