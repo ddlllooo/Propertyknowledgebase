@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell knowledge-page" ref="pageRef">
+  <div class="page-shell knowledge-page">
     <section class="search-hero">
       <div>
         <h2>在线知识库</h2>
@@ -82,15 +82,11 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { gsap } from 'gsap'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, DocumentCopy, Search, View } from '@element-plus/icons-vue'
 import { getCategories, getQaDetail, getQaList } from '../../api/qa'
 import { createFeedback } from '../../api/feedback'
-
-const pageRef = ref(null)
-let ctx
 
 const keyword = ref('')
 const activeCategory = ref('全部')
@@ -134,17 +130,6 @@ onMounted(async () => {
   }
   await Promise.all([fetchCategories(), fetchQaList()])
 
-  if (!pageRef.value) return
-  ctx = gsap.context(() => {
-    // 搜索区域入场
-    gsap.from('.search-hero', { y: -30, opacity: 0, duration: 0.7, ease: 'power3.out', clearProps: 'all' })
-
-    // 筛选按钮依次出现
-    gsap.from('.filter-row button', { y: 20, opacity: 0, duration: 0.4, stagger: 0.06, delay: 0.3, ease: 'power2.out', clearProps: 'all' })
-
-    // 知识卡片入场
-    gsap.from('.knowledge-card', { y: 40, opacity: 0, duration: 0.5, stagger: 0.08, delay: 0.5, ease: 'power2.out', clearProps: 'all' })
-  }, pageRef.value)
 })
 
 let searchTimer = null
@@ -153,16 +138,7 @@ watch([keyword, activeCategory], () => {
   searchTimer = setTimeout(fetchQaList, 250)
 })
 
-// 搜索结果变化时重新动画卡片
-watch(
-  () => qaRecords.value,
-  async () => {
-    await nextTick()
-    gsap.from('.knowledge-card', { y: 30, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', clearProps: 'all' })
-  }
-)
-
-onUnmounted(() => {
+onBeforeUnmount(() => {
   clearTimeout(searchTimer)
 })
 

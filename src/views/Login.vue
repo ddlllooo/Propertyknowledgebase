@@ -5,7 +5,7 @@
       <div class="brand-inner">
         <!-- 品牌标识 -->
         <div class="brand-header">
-          <div class="logo-mark">
+          <div class="logo-mark" aria-label="智慧物业知识库">
             <el-icon><Connection /></el-icon>
           </div>
           <div>
@@ -26,7 +26,7 @@
         <!-- 服务卡片网格 -->
         <div class="service-grid">
           <div class="service-card" v-for="item in services" :key="item.title">
-            <div class="service-icon" :style="{ background: item.bg }">
+            <div class="service-icon" :style="{ background: item.bg }" aria-hidden="true">
               <el-icon :size="24"><component :is="item.icon" /></el-icon>
             </div>
             <h3>{{ item.title }}</h3>
@@ -57,11 +57,8 @@
     <!-- 右侧登录区 -->
     <section class="login-section">
       <div class="login-card">
-        <!-- 顶部装饰条 -->
-        <div class="card-accent"></div>
-
         <div class="card-header">
-          <div class="header-icon">
+          <div class="header-icon" aria-hidden="true">
             <el-icon :size="28"><Connection /></el-icon>
           </div>
           <h2>欢迎回来</h2>
@@ -167,7 +164,7 @@
     <el-dialog v-model="resetVisible" title="找回密码" :width="resetDialogWidth" @closed="resetResetForm">
       <!-- Step 1: Submit request -->
       <div v-if="resetStep === 1">
-        <p style="color: #6b7c93; margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。如有紧急问题，请联系物业前台。</p>
+        <p style="color: var(--color-text-secondary); margin-bottom: 16px;">请输入您的用户名或邮箱，提交密码重置请求。如有紧急问题，请联系物业前台。</p>
         <el-input
           v-model="resetUsername"
           placeholder="请输入用户名或邮箱"
@@ -197,7 +194,7 @@
             <span class="temp-password-text">{{ resetResult.tempPassword }}</span>
             <el-button type="primary" link @click="copyTempPassword">复制</el-button>
           </div>
-          <p style="color: #e6a23c; margin-top: 12px; font-size: 13px;">
+          <p style="color: var(--color-text-secondary); margin-top: 12px; font-size: 13px;">
             注意：首次登录后必须修改密码才能正常使用系统。
           </p>
         </div>
@@ -240,127 +237,16 @@ let ctx
 onMounted(() => {
   if (!loginPageRef.value) return
   ctx = gsap.context(() => {
-    // 品牌标识入场
-    gsap.from('.brand-header', {
-      x: -40,
+    gsap.from('.brand-section', {
       opacity: 0,
-      duration: 0.7,
-      ease: 'power3.out',
-      clearProps: 'all'
-    })
-
-    // 主标题入场
-    gsap.from('.brand-title', {
-      y: 50,
-      opacity: 0,
-      duration: 0.8,
-      delay: 0.2,
-      ease: 'power3.out',
-      clearProps: 'all'
-    })
-
-    // 描述文字入场
-    gsap.from('.brand-desc', {
-      y: 30,
-      opacity: 0,
-      duration: 0.6,
-      delay: 0.5,
+      duration: 0.2,
       ease: 'power2.out',
       clearProps: 'all'
     })
-
-    // 服务卡片依次入场
-    gsap.from('.service-card', {
-      y: 40,
-      opacity: 0,
-      duration: 0.6,
-      stagger: 0.12,
-      delay: 0.6,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    // 底部数据入场
-    gsap.from('.footer-stat', {
-      y: 30,
-      opacity: 0,
-      duration: 0.5,
-      stagger: 0.1,
-      delay: 1.0,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    // 登录卡片入场
     gsap.from('.login-card', {
-      y: 50,
       opacity: 0,
-      duration: 0.8,
-      delay: 0.3,
-      ease: 'power3.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.card-header', {
-      y: 20,
-      opacity: 0,
-      duration: 0.5,
-      delay: 0.6,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.login-card .el-form-item', {
-      y: 25,
-      opacity: 0,
-      duration: 0.5,
-      stagger: 0.1,
-      delay: 0.7,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.form-options', {
-      y: 20,
-      opacity: 0,
-      duration: 0.4,
-      delay: 1.0,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.login-btn', {
-      y: 20,
-      opacity: 0,
-      duration: 0.5,
-      delay: 1.1,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.divider', {
-      scaleX: 0,
-      opacity: 0,
-      duration: 0.5,
-      delay: 1.2,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.alt-actions .el-button', {
-      y: 15,
-      opacity: 0,
-      duration: 0.4,
-      stagger: 0.1,
-      delay: 1.3,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-
-    gsap.from('.card-footer-text', {
-      opacity: 0,
-      duration: 0.4,
-      delay: 1.5,
+      duration: 0.25,
+      delay: 0.1,
       ease: 'power2.out',
       clearProps: 'all'
     })
@@ -652,10 +538,27 @@ const copyTempPassword = () => {
 
 <style scoped>
 .login-page {
+  --color-primary: #1178ff;
+  --color-primary-dark: #0e6fff;
+  --color-primary-hover: #2b86ff;
+  --color-teal: #13bea7;
+  --color-purple: #7c6cff;
+  --color-text-primary: #172b4d;
+  --color-text-secondary: #6b7c93;
+  --color-text-muted: #6b7c93;
+  --color-text-faint: #b0bec5;
+  --color-border: #e8eef4;
+  --color-border-hover: #c0d0e0;
+  --color-bg-page: #f8fafc;
+  --color-bg-input: #f8fafc;
+  --color-bg-card: #fff;
+  --color-focus-glow: rgba(17, 120, 255, 0.1);
+  --color-shadow: rgba(15, 62, 111, 0.08);
+
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  background: #f8fafc;
+  background: var(--color-bg-page);
   overflow: hidden;
 }
 
@@ -665,9 +568,9 @@ const copyTempPassword = () => {
   align-items: center;
   padding: 60px 72px;
   background:
-    radial-gradient(circle at 20% 80%, rgba(17, 120, 255, 0.06), transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(19, 190, 167, 0.05), transparent 50%),
-    #fff;
+    radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--color-primary) 6%, transparent), transparent 50%),
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--color-teal) 5%, transparent), transparent 50%),
+    var(--color-bg-card);
 }
 
 .brand-inner {
@@ -688,23 +591,23 @@ const copyTempPassword = () => {
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: linear-gradient(135deg, #1178ff, #13bea7);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-teal));
   color: #fff;
   font-size: 24px;
-  box-shadow: 0 8px 24px rgba(17, 120, 255, 0.25);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .logo-title {
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: #172b4d;
+  color: var(--color-text-primary);
 }
 
 .logo-sub {
   margin: 2px 0 0;
   font-size: 13px;
-  color: #8a9db1;
+  color: var(--color-text-muted);
 }
 
 .brand-title {
@@ -712,17 +615,17 @@ const copyTempPassword = () => {
   font-size: clamp(36px, 5vw, 52px);
   font-weight: 800;
   line-height: 1.15;
-  color: #172b4d;
+  color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
 
 .brand-title .accent {
-  color: #1178ff;
+  color: var(--color-primary);
 }
 
 .brand-desc {
   margin: 0 0 48px;
-  color: #6b7c93;
+  color: var(--color-text-secondary);
   font-size: 17px;
   line-height: 1.7;
 }
@@ -738,14 +641,14 @@ const copyTempPassword = () => {
 .service-card {
   padding: 20px;
   border-radius: 16px;
-  background: #fff;
-  border: 1px solid #e8eef4;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   transition: all 0.25s;
 }
 
 .service-card:hover {
-  border-color: #1178ff33;
-  box-shadow: 0 8px 24px rgba(17, 120, 255, 0.08);
+  border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 8%, transparent);
   transform: translateY(-2px);
 }
 
@@ -756,20 +659,20 @@ const copyTempPassword = () => {
   place-items: center;
   border-radius: 12px;
   margin-bottom: 14px;
-  color: #1178ff;
+  color: var(--color-primary);
 }
 
 .service-card h3 {
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 700;
-  color: #172b4d;
+  color: var(--color-text-primary);
 }
 
 .service-card p {
   margin: 0;
   font-size: 13px;
-  color: #8a9db1;
+  color: var(--color-text-muted);
 }
 
 /* 底部数据 */
@@ -788,13 +691,13 @@ const copyTempPassword = () => {
 .stat-value {
   font-size: 28px;
   font-weight: 800;
-  color: #172b4d;
+  color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #8a9db1;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -802,7 +705,7 @@ const copyTempPassword = () => {
 .footer-divider {
   width: 1px;
   height: 40px;
-  background: #e8eef4;
+  background: var(--color-border);
 }
 
 /* 右侧登录区 */
@@ -819,21 +722,12 @@ const copyTempPassword = () => {
   max-width: 420px;
   padding: 40px 44px 36px;
   border-radius: 24px;
-  background: #fff;
+  background: var(--color-bg-card);
   box-shadow:
-    0 2px 8px rgba(15, 62, 111, 0.04),
-    0 12px 40px rgba(15, 62, 111, 0.08);
-  border: 1px solid #e8eef4;
+    0 2px 8px color-mix(in srgb, var(--color-shadow) 50%, transparent),
+    0 12px 40px var(--color-shadow);
+  border: 1px solid var(--color-border);
   overflow: hidden;
-}
-
-.card-accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #1178ff, #13bea7, #7c6cff);
 }
 
 .card-header {
@@ -848,8 +742,8 @@ const copyTempPassword = () => {
   width: 60px;
   height: 60px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(17, 120, 255, 0.1), rgba(19, 190, 167, 0.1));
-  color: #1178ff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, transparent), color-mix(in srgb, var(--color-teal) 10%, transparent));
+  color: var(--color-primary);
   margin-bottom: 20px;
 }
 
@@ -857,12 +751,12 @@ const copyTempPassword = () => {
   margin: 0 0 8px;
   font-size: 26px;
   font-weight: 800;
-  color: #172b4d;
+  color: var(--color-text-primary);
 }
 
 .card-header p {
   margin: 0;
-  color: #8a9db1;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -871,8 +765,8 @@ const copyTempPassword = () => {
 }
 
 .login-card :deep(.el-input__wrapper) {
-  background: #f8fafc;
-  border: 1px solid #e8eef4;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   box-shadow: none;
   height: 52px;
@@ -881,17 +775,17 @@ const copyTempPassword = () => {
 }
 
 .login-card :deep(.el-input__wrapper:hover) {
-  border-color: #c0d0e0;
+  border-color: var(--color-border-hover);
 }
 
 .login-card :deep(.el-input__wrapper.is-focus) {
-  border-color: #1178ff;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(17, 120, 255, 0.1);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 3px var(--color-focus-glow);
 }
 
 .login-card :deep(.el-input__prefix) {
-  color: #8a9db1;
+  color: var(--color-text-muted);
 }
 
 .login-card :deep(.el-input__inner) {
@@ -906,7 +800,7 @@ const copyTempPassword = () => {
 }
 
 .form-options :deep(.el-checkbox__label) {
-  color: #6b7c93;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -914,7 +808,7 @@ const copyTempPassword = () => {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1178ff;
+  color: var(--color-primary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -922,7 +816,13 @@ const copyTempPassword = () => {
 }
 
 .link-btn:hover {
-  color: #0d65e0;
+  color: var(--color-primary-dark);
+}
+
+.link-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .login-btn {
@@ -930,23 +830,23 @@ const copyTempPassword = () => {
   height: 52px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(135deg, #1178ff, #0e6fff);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.04em;
   transition: all 0.3s;
-  box-shadow: 0 4px 16px rgba(17, 120, 255, 0.25);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .login-btn:hover {
-  background: linear-gradient(135deg, #2b86ff, #1178ff);
-  box-shadow: 0 8px 28px rgba(17, 120, 255, 0.35);
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 35%, transparent);
   transform: translateY(-2px);
 }
 
 .login-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(17, 120, 255, 0.2);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .divider {
@@ -954,7 +854,7 @@ const copyTempPassword = () => {
   align-items: center;
   gap: 16px;
   margin: 28px 0 20px;
-  color: #b0bec5;
+  color: var(--color-text-faint);
   font-size: 13px;
 }
 
@@ -963,7 +863,7 @@ const copyTempPassword = () => {
   content: '';
   flex: 1;
   height: 1px;
-  background: #e8eef4;
+  background: var(--color-border);
 }
 
 .alt-actions {
@@ -981,34 +881,34 @@ const copyTempPassword = () => {
 }
 
 .guest-btn {
-  border: 1px solid #d8e5ef;
-  background: #fff;
-  color: #5a6f85;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
 }
 
 .guest-btn:hover {
-  border-color: #13bea7;
-  color: #13bea7;
-  background: #f0faf8;
+  border-color: var(--color-teal);
+  color: var(--color-teal);
+  background: color-mix(in srgb, var(--color-teal) 6%, var(--color-bg-card));
 }
 
 .register-btn {
-  border: 1px solid #d8e5ef;
-  background: #fff;
-  color: #5a6f85;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
 }
 
 .register-btn:hover {
-  border-color: #1178ff;
-  color: #1178ff;
-  background: #f0f7ff;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg-card));
 }
 
 .card-footer-text {
   margin: 24px 0 0;
   text-align: center;
   font-size: 12px;
-  color: #b0bec5;
+  color: var(--color-text-faint);
 }
 
 /* 弹窗样式 */
@@ -1019,14 +919,14 @@ const copyTempPassword = () => {
   gap: 12px;
   padding: 20px;
   border-radius: 14px;
-  background: #f0f9ff;
-  border: 1px solid #b3d8ff;
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg-card));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
 }
 
 .temp-password-text {
   font-size: 28px;
   font-weight: 800;
-  color: #172b4d;
+  color: var(--color-text-primary);
   letter-spacing: 4px;
   font-family: monospace;
 }
@@ -1045,7 +945,7 @@ const copyTempPassword = () => {
   height: 44px;
   border-radius: 10px;
   cursor: pointer;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--color-border);
 }
 
 .captcha-placeholder {
