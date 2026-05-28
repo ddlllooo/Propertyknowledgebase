@@ -1,55 +1,88 @@
 <template>
   <main class="login-page" ref="loginPageRef">
-    <section class="brand-panel">
-      <div class="floating-circle circle-1"></div>
-      <div class="floating-circle circle-2"></div>
-      <div class="floating-circle circle-3"></div>
-      <div class="brand-badge">
-        <el-icon><Connection /></el-icon>
-        业主服务
+    <!-- 艺术背景装饰 -->
+    <div class="art-bg">
+      <div class="geo geo-1"></div>
+      <div class="geo geo-2"></div>
+      <div class="geo geo-3"></div>
+      <div class="geo geo-4"></div>
+      <div class="line line-1"></div>
+      <div class="line line-2"></div>
+      <div class="line line-3"></div>
+      <div class="dot-grid"></div>
+    </div>
+
+    <!-- 左侧品牌区 -->
+    <section class="brand-section">
+      <div class="brand-content">
+        <div class="brand-tag">
+          <span class="tag-dot"></span>
+          智慧物业知识库
+        </div>
+        <h1 class="brand-title">
+          <span class="title-line">有问题</span>
+          <span class="title-line accent">问物业</span>
+        </h1>
+        <p class="brand-desc">
+          缴费、报修、停车、装修
+          <br>
+          有疑问就来这里问
+        </p>
+        <div class="brand-stats">
+          <div class="stat">
+            <span class="stat-num">24h</span>
+            <span class="stat-label">在线服务</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">AI</span>
+            <span class="stat-label">智能匹配</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">100%</span>
+            <span class="stat-label">问题覆盖</span>
+          </div>
+        </div>
       </div>
-      <h1>有问题？问物业</h1>
-      <p>
-        缴费、报修、停车、装修——有疑问就来这里问，随时为您解答。
-      </p>
     </section>
 
-    <section class="login-card">
-      <div class="card-head">
-        <span>登录</span>
-        <small>欢迎使用</small>
-      </div>
-      <el-form :model="form" :rules="rules" ref="loginFormRef" size="large" @keyup.enter="handleLogin">
-        <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="请输入姓名或邮箱" :prefix-icon="User" />
-        </el-form-item>
-        <el-form-item prop="password">
-          <el-input
-            v-model="form.password"
-            placeholder="请输入密码"
-            type="password"
-            show-password
-            :prefix-icon="Lock"
-          />
-        </el-form-item>
-        <div class="remember-row">
-          <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+    <!-- 右侧登录区 -->
+    <section class="login-section">
+      <div class="login-card">
+        <div class="card-header">
+          <h2>登录</h2>
+          <p>欢迎回来</p>
         </div>
-        <el-button class="login-button" type="primary" :loading="loading" @click="handleLogin">
-          登录
-        </el-button>
-      </el-form>
-      <div class="register-entry">
-        还没有账号？
-        <button type="button" @click="openRegisterDialog">立即注册</button>
-      </div>
-      <div class="forgot-entry">
-        <button type="button" @click="openResetDialog">忘记密码？</button>
-      </div>
-      <div class="guest-entry">
-        <el-button class="guest-button" :loading="guestLoading" @click="handleGuestLogin">
+        <el-form :model="form" :rules="rules" ref="loginFormRef" size="large" @keyup.enter="handleLogin">
+          <el-form-item prop="username">
+            <el-input v-model="form.username" placeholder="请输入姓名或邮箱" :prefix-icon="User" />
+          </el-form-item>
+          <el-form-item prop="password">
+            <el-input
+              v-model="form.password"
+              placeholder="请输入密码"
+              type="password"
+              show-password
+              :prefix-icon="Lock"
+            />
+          </el-form-item>
+          <div class="form-options">
+            <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+            <button type="button" class="link-btn" @click="openResetDialog">忘记密码？</button>
+          </div>
+          <el-button class="login-btn" type="primary" :loading="loading" @click="handleLogin">
+            登录
+          </el-button>
+        </el-form>
+        <div class="divider">
+          <span>或</span>
+        </div>
+        <el-button class="guest-btn" :loading="guestLoading" @click="handleGuestLogin">
           游客体验
         </el-button>
+        <div class="register-link">
+          还没有账号？
+          <button type="button" @click="openRegisterDialog">立即注册</button>
+        </div>
       </div>
     </section>
 
@@ -171,7 +204,7 @@ import { useDialogWidth } from '../composables/useDialogWidth'
 
 const registerDialogWidth = useDialogWidth(460)
 const resetDialogWidth = useDialogWidth(460)
-import { Connection, Key, Lock, Message, User } from '@element-plus/icons-vue'
+import { Key, Lock, Message, User } from '@element-plus/icons-vue'
 import { login, guestLogin, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
 
 const router = useRouter()
@@ -181,111 +214,128 @@ let ctx
 onMounted(() => {
   if (!loginPageRef.value) return
   ctx = gsap.context(() => {
-    // 品牌面板滑入
-    gsap.from('.brand-panel', {
-      x: -80,
+    // 背景装饰动画
+    gsap.from('.geo', {
+      scale: 0.8,
       opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out',
+      duration: 1.5,
+      stagger: 0.2,
+      ease: 'power2.out',
       clearProps: 'all'
     })
-    // 品牌面板内元素依次淡入
-    gsap.from('.brand-badge', {
-      y: 20,
+
+    // 品牌区入场
+    gsap.from('.brand-tag', {
+      x: -30,
       opacity: 0,
-      duration: 0.5,
+      duration: 0.6,
       delay: 0.3,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-    gsap.from('.brand-panel h1', {
-      y: 30,
-      opacity: 0,
-      duration: 0.6,
-      delay: 0.5,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-    gsap.from('.brand-panel p', {
-      y: 30,
-      opacity: 0,
-      duration: 0.6,
-      delay: 0.7,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-    // 登录卡片滑入
-    gsap.from('.login-card', {
-      x: 80,
-      opacity: 0,
-      duration: 0.8,
       ease: 'power3.out',
       clearProps: 'all'
     })
-    // 登录卡片内元素依次淡入
-    gsap.from('.card-head', {
-      y: 20,
+
+    gsap.from('.title-line', {
+      y: 60,
       opacity: 0,
-      duration: 0.5,
-      delay: 0.4,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-    gsap.from('.login-card .el-form-item', {
-      y: 25,
-      opacity: 0,
-      duration: 0.5,
-      stagger: 0.12,
+      duration: 0.8,
+      stagger: 0.15,
       delay: 0.5,
-      ease: 'power2.out',
+      ease: 'power3.out',
       clearProps: 'all'
     })
-    gsap.from('.remember-row', {
-      y: 20,
+
+    gsap.from('.brand-desc', {
+      y: 30,
       opacity: 0,
-      duration: 0.4,
+      duration: 0.6,
       delay: 0.9,
       ease: 'power2.out',
       clearProps: 'all'
     })
-    gsap.from('.login-button', {
-      y: 20,
+
+    gsap.from('.stat', {
+      y: 40,
       opacity: 0,
       duration: 0.5,
-      delay: 1.0,
-      ease: 'power2.out',
-      clearProps: 'all'
-    })
-    gsap.from('.register-entry, .forgot-entry, .guest-entry', {
-      y: 15,
-      opacity: 0,
-      duration: 0.4,
       stagger: 0.1,
       delay: 1.1,
       ease: 'power2.out',
       clearProps: 'all'
     })
-    // 浮动圆圈持续动画
-    gsap.to('.circle-1', {
+
+    // 登录卡片入场
+    gsap.from('.login-card', {
+      y: 40,
+      opacity: 0,
+      duration: 0.8,
+      delay: 0.4,
+      ease: 'power3.out',
+      clearProps: 'all'
+    })
+
+    gsap.from('.card-header', {
       y: 20,
-      x: -10,
-      duration: 4,
+      opacity: 0,
+      duration: 0.5,
+      delay: 0.7,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+
+    gsap.from('.login-card .el-form-item', {
+      y: 25,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.1,
+      delay: 0.8,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+
+    gsap.from('.login-btn', {
+      y: 20,
+      opacity: 0,
+      duration: 0.5,
+      delay: 1.1,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+
+    // 装饰线条动画
+    gsap.from('.line', {
+      scaleX: 0,
+      scaleY: 0,
+      opacity: 0,
+      duration: 1.2,
+      stagger: 0.2,
+      delay: 0.5,
+      ease: 'power2.inOut',
+      clearProps: 'all'
+    })
+
+    // 背景光晕持续动画
+    gsap.to('.geo-1', {
+      x: 30,
+      y: 20,
+      duration: 8,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut'
     })
-    gsap.to('.circle-2', {
+
+    gsap.to('.geo-2', {
+      x: -20,
+      y: -30,
+      duration: 10,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+
+    gsap.to('.geo-3', {
+      x: 25,
       y: -15,
-      x: 10,
-      duration: 5,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut'
-    })
-    gsap.to('.circle-3', {
-      y: 12,
-      x: -8,
-      duration: 3.5,
+      duration: 7,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut'
@@ -571,216 +621,365 @@ const copyTempPassword = () => {
 
 <style scoped>
 .login-page {
+  position: relative;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(400px, 460px);
-  gap: 42px;
-  align-items: center;
-  padding: 64px clamp(28px, 6vw, 96px);
-  background:
-    linear-gradient(135deg, rgba(17, 120, 255, 0.14), rgba(19, 190, 167, 0.08)),
-    #f4f8fb;
-}
-
-.brand-panel {
-  position: relative;
-  min-height: 420px;
-  padding: 48px;
-  border-radius: 24px;
-  color: #fff;
-  background:
-    linear-gradient(135deg, rgba(10, 103, 230, 0.92), rgba(18, 184, 166, 0.86)),
-    url("/images/bg-login.jpg")
-      center/cover;
-  background-blend-mode: multiply;
-  box-shadow: 0 16px 48px rgba(17, 98, 191, 0.18);
+  grid-template-columns: 1fr 1fr;
   overflow: hidden;
+  background: #0a0a0f;
 }
 
-.floating-circle {
+/* 艺术背景装饰 */
+.art-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.geo {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  pointer-events: none;
 }
 
-.circle-1 {
+.geo-1 {
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  left: -100px;
+  background: radial-gradient(circle, oklch(0.5 0.2 250 / 0.15), transparent 70%);
+}
+
+.geo-2 {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  right: -50px;
+  background: radial-gradient(circle, oklch(0.6 0.25 170 / 0.12), transparent 70%);
+}
+
+.geo-3 {
+  width: 300px;
+  height: 300px;
+  top: 40%;
+  left: 30%;
+  background: radial-gradient(circle, oklch(0.55 0.18 300 / 0.1), transparent 70%);
+}
+
+.geo-4 {
   width: 200px;
   height: 200px;
-  top: -60px;
-  right: -40px;
-}
-
-.circle-2 {
-  width: 140px;
-  height: 140px;
-  bottom: -30px;
-  left: -20px;
-}
-
-.circle-3 {
-  width: 80px;
-  height: 80px;
-  top: 50%;
+  top: 20%;
   right: 20%;
+  background: radial-gradient(circle, oklch(0.65 0.2 200 / 0.08), transparent 70%);
 }
 
-.brand-badge {
-  width: fit-content;
+.line {
+  position: absolute;
+  background: oklch(1 0 0 / 0.03);
+}
+
+.line-1 {
+  width: 1px;
+  height: 100%;
+  left: 50%;
+}
+
+.line-2 {
+  width: 100%;
+  height: 1px;
+  top: 30%;
+}
+
+.line-3 {
+  width: 100%;
+  height: 1px;
+  top: 70%;
+}
+
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(oklch(1 0 0 / 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* 左侧品牌区 */
+.brand-section {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 80px;
+}
+
+.brand-content {
+  max-width: 560px;
+}
+
+.brand-tag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  border: 1px solid oklch(1 0 0 / 0.1);
+  background: oklch(1 0 0 / 0.03);
+  color: oklch(0.8 0.05 250);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-bottom: 48px;
 }
 
-.brand-panel h1 {
-  max-width: 720px;
-  margin: 36px 0 16px;
-  font-size: clamp(26px, 3.5vw, 40px);
-  line-height: 1.2;
-  font-weight: 700;
+.tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.7 0.25 170);
+  box-shadow: 0 0 12px oklch(0.7 0.25 170 / 0.6);
 }
 
-.brand-panel p {
-  max-width: 650px;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.88);
+.brand-title {
+  margin: 0 0 32px;
+}
+
+.title-line {
+  display: block;
+  font-size: clamp(56px, 8vw, 96px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: oklch(0.95 0.02 250);
+  letter-spacing: -0.03em;
+}
+
+.title-line.accent {
+  color: oklch(0.75 0.25 170);
+  text-shadow: 0 0 60px oklch(0.7 0.25 170 / 0.3);
+}
+
+.brand-desc {
+  margin: 0 0 56px;
+  color: oklch(0.6 0.02 250);
   font-size: 18px;
-  line-height: 1.9;
+  line-height: 1.8;
+}
+
+.brand-stats {
+  display: flex;
+  gap: 48px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-num {
+  font-size: 32px;
+  font-weight: 800;
+  color: oklch(0.9 0.05 250);
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: oklch(0.5 0.02 250);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* 右侧登录区 */
+.login-section {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px;
 }
 
 .login-card {
-  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  padding: 48px;
   border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 8px 32px rgba(15, 62, 111, 0.1);
+  background: oklch(0.12 0.02 250);
+  border: 1px solid oklch(1 0 0 / 0.06);
+  backdrop-filter: blur(20px);
 }
 
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 26px;
+.card-header {
+  margin-bottom: 40px;
 }
 
-.card-head span {
-  color: #172b4d;
+.card-header h2 {
+  margin: 0 0 8px;
   font-size: 32px;
   font-weight: 800;
+  color: oklch(0.95 0.02 250);
+  letter-spacing: -0.02em;
 }
 
-.card-head small {
-  color: #6b7c93;
+.card-header p {
+  margin: 0;
+  color: oklch(0.5 0.02 250);
+  font-size: 15px;
 }
 
-.login-button {
-  width: 100%;
-  height: 46px;
-  border: 0;
+.login-card :deep(.el-input__wrapper) {
+  background: oklch(0.15 0.02 250);
+  border: 1px solid oklch(1 0 0 / 0.08);
   border-radius: 14px;
-  background: linear-gradient(120deg, #1178ff, #13bea7);
-  font-weight: 700;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: none;
+  height: 52px;
 }
 
-.login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(17, 120, 255, 0.35);
+.login-card :deep(.el-input__wrapper:hover),
+.login-card :deep(.el-input__wrapper.is-focus) {
+  border-color: oklch(0.7 0.25 170);
+  box-shadow: 0 0 0 3px oklch(0.7 0.25 170 / 0.1);
 }
 
-.login-button:active {
-  transform: translateY(0);
+.login-card :deep(.el-input__inner) {
+  color: oklch(0.9 0.02 250);
 }
 
-.remember-row {
-  margin-bottom: 16px;
+.login-card :deep(.el-input__inner::placeholder) {
+  color: oklch(0.4 0.02 250);
 }
 
-.remember-row :deep(.el-checkbox__label) {
-  color: #6b7c93;
+.login-card :deep(.el-input__prefix) {
+  color: oklch(0.5 0.02 250);
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.form-options :deep(.el-checkbox__label) {
+  color: oklch(0.5 0.02 250);
   font-size: 14px;
 }
 
-.register-entry {
-  margin-top: 16px;
-  color: #6b7c93;
-  text-align: center;
+.form-options :deep(.el-checkbox__inner) {
+  background: oklch(0.15 0.02 250);
+  border-color: oklch(1 0 0 / 0.15);
 }
 
-.register-entry button {
+.link-btn {
   padding: 0;
   border: 0;
-  color: #0e6fff;
   background: transparent;
+  color: oklch(0.7 0.25 170);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.link-btn:hover {
+  color: oklch(0.8 0.25 170);
+}
+
+.login-btn {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: oklch(0.65 0.25 170);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+}
+
+.login-btn:hover {
+  background: oklch(0.7 0.25 170);
+  box-shadow: 0 8px 32px oklch(0.65 0.25 170 / 0.4);
+  transform: translateY(-2px);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+  color: oklch(0.4 0.02 250);
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: oklch(1 0 0 / 0.06);
+}
+
+.guest-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid oklch(1 0 0 / 0.1);
+  background: transparent;
+  color: oklch(0.7 0.02 250);
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.guest-btn:hover {
+  border-color: oklch(0.7 0.25 170);
+  color: oklch(0.7 0.25 170);
+  background: oklch(0.7 0.25 170 / 0.05);
+}
+
+.register-link {
+  margin-top: 32px;
+  text-align: center;
+  color: oklch(0.5 0.02 250);
+  font-size: 14px;
+}
+
+.register-link button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: oklch(0.7 0.25 170);
   font-weight: 700;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.2s;
 }
 
-.register-entry button:hover {
-  color: #13bea7;
+.register-link button:hover {
+  color: oklch(0.8 0.25 170);
 }
 
-.forgot-entry {
-  margin-top: 8px;
-  text-align: center;
-}
-
-.forgot-entry button {
-  padding: 0;
-  border: 0;
-  color: #6b7c93;
-  background: transparent;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.forgot-entry button:hover {
-  color: #0e6fff;
-}
-
-.guest-entry {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.guest-button {
-  width: 100%;
-  height: 42px;
-  border-radius: 14px;
-  border: 1px solid #d8e5ef;
-  color: #5a6f85;
-  background: #fff;
-  font-weight: 600;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.guest-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(17, 120, 255, 0.15);
-  color: #1178ff;
-  border-color: #b3d8ff;
-  background: #f0f7ff;
-}
-
+/* 弹窗样式 */
 .temp-password-box {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #f0f9ff;
-  border: 1px solid #b3d8ff;
+  padding: 20px;
+  border-radius: 14px;
+  background: oklch(0.15 0.02 250);
+  border: 1px solid oklch(0.7 0.25 170 / 0.3);
 }
 
 .temp-password-text {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
-  color: #172b4d;
-  letter-spacing: 2px;
+  color: oklch(0.9 0.02 250);
+  letter-spacing: 4px;
   font-family: monospace;
 }
 
@@ -795,61 +994,77 @@ const copyTempPassword = () => {
 }
 
 .captcha-img {
-  height: 40px;
-  border-radius: 8px;
+  height: 44px;
+  border-radius: 10px;
   cursor: pointer;
-  border: 1px solid #dcdfe6;
+  border: 1px solid oklch(1 0 0 / 0.1);
 }
 
 .captcha-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  color: #909399;
+  width: 130px;
+  color: oklch(0.5 0.02 250);
   font-size: 13px;
 }
 
-@media (max-width: 980px) {
+/* 响应式 */
+@media (max-width: 1024px) {
   .login-page {
     grid-template-columns: 1fr;
   }
 
-  .brand-panel {
-    min-height: auto;
+  .brand-section {
+    padding: 60px 40px 40px;
+  }
+
+  .brand-content {
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .brand-tag {
+    margin-bottom: 32px;
+  }
+
+  .brand-stats {
+    justify-content: center;
+  }
+
+  .login-section {
+    padding: 40px;
   }
 }
 
 @media (max-width: 767px) {
-  .login-page {
-    padding: 16px;
+  .brand-section {
+    padding: 40px 20px 32px;
   }
 
-  .brand-panel {
-    padding: 24px 20px;
+  .title-line {
+    font-size: 48px;
   }
 
-  .brand-panel h1 {
-    font-size: clamp(24px, 6vw, 36px);
-    margin: 24px 0 12px;
-  }
-
-  .brand-panel p {
+  .brand-desc {
     font-size: 15px;
-    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+
+  .brand-stats {
+    gap: 32px;
+  }
+
+  .stat-num {
+    font-size: 24px;
+  }
+
+  .login-section {
+    padding: 20px;
   }
 
   .login-card {
-    padding: 24px;
-  }
-
-  .captcha-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .captcha-row .el-input {
-    flex: 1;
+    padding: 32px 24px;
   }
 }
 </style>
