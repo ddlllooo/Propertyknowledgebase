@@ -309,7 +309,15 @@ const handleLogout = async () => {
 
 @media (max-width: 767px) {
   .admin-layout {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main-container {
+    overflow: visible;
   }
 
   .admin-header {
@@ -318,6 +326,7 @@ const handleLogout = async () => {
     padding: 12px 16px;
     flex-wrap: wrap;
     gap: 12px;
+    flex-shrink: 0;
   }
 
   .page-title h1 {
@@ -334,6 +343,7 @@ const handleLogout = async () => {
 
   .admin-main {
     padding: 16px;
+    overflow-y: visible;
   }
 }
 </style>

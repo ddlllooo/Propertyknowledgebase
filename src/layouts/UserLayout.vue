@@ -342,12 +342,21 @@ const handleCommand = async (command) => {
 
 @media (max-width: 767px) {
   .user-layout {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main-container {
+    overflow: visible;
   }
 
   .topbar {
     height: 60px;
     padding: 0 16px;
+    flex-shrink: 0;
   }
 
   .topbar h1 {
@@ -369,6 +378,7 @@ const handleCommand = async (command) => {
   .content {
     padding: 16px;
     padding-bottom: 80px;
+    overflow-y: visible;
   }
 }
 </style>
