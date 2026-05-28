@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell chat-page">
+  <div class="page-shell chat-page" ref="pageRef">
     <section class="assistant-card">
       <div class="assistant-icon">
         <el-icon><ChatDotRound /></el-icon>
@@ -116,7 +116,8 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { gsap } from 'gsap'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Promotion } from '@element-plus/icons-vue'
 import { useDialogWidth } from '../../composables/useDialogWidth'
@@ -124,6 +125,9 @@ import { sendQuestion, sendGuestQuestion } from '../../api/chat'
 import { createFeedback } from '../../api/feedback'
 
 const feedbackDialogWidth = useDialogWidth(460)
+
+const pageRef = ref(null)
+let ctx
 
 const CHAT_SESSION_KEY = 'userChatAgentMessages'
 const GUEST_COUNT_KEY = 'guestChatCount'
@@ -315,7 +319,44 @@ onMounted(async () => {
   initGuestCount()
   loadCachedMessages()
   await scrollToBottom()
+
+  if (!pageRef.value) return
+  ctx = gsap.context(() => {
+    // 助手卡片入场
+    gsap.from('.assistant-card', { y: -30, opacity: 0, duration: 0.6, ease: 'power3.out', clearProps: 'all' })
+
+    // 聊天面板入场
+    gsap.from('.chat-panel', { y: 30, opacity: 0, duration: 0.6, delay: 0.2, ease: 'power2.out', clearProps: 'all' })
+
+    // 侧边栏卡片入场
+    gsap.from('.tips-card', { x: 30, opacity: 0, duration: 0.5, delay: 0.4, ease: 'power2.out', clearProps: 'all' })
+    gsap.from('.recommend-card', { x: 30, opacity: 0, duration: 0.5, delay: 0.55, ease: 'power2.out', clearProps: 'all' })
+
+    // 推荐问题按钮依次出现
+    gsap.from('.recommend-card button', { y: 15, opacity: 0, duration: 0.3, stagger: 0.08, delay: 0.7, ease: 'power2.out', clearProps: 'all' })
+  }, pageRef.value)
 })
+
+onUnmounted(() => {
+  ctx?.revert()
+})
+
+// 监听消息变化，为新消息添加入场动画
+let lastMessageCount = messages.value.length
+watch(
+  () => messages.value.length,
+  async (newCount) => {
+    if (newCount > lastMessageCount) {
+      await nextTick()
+      const rows = document.querySelectorAll('.message-row')
+      const newRow = rows[rows.length - 1]
+      if (newRow) {
+        gsap.from(newRow, { y: 20, opacity: 0, duration: 0.4, ease: 'power2.out' })
+      }
+    }
+    lastMessageCount = newCount
+  }
+)
 </script>
 
 <style scoped>

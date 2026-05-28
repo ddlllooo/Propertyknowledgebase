@@ -1,6 +1,9 @@
 <template>
-  <main class="login-page">
+  <main class="login-page" ref="loginPageRef">
     <section class="brand-panel">
+      <div class="floating-circle circle-1"></div>
+      <div class="floating-circle circle-2"></div>
+      <div class="floating-circle circle-3"></div>
       <div class="brand-badge">
         <el-icon><Connection /></el-icon>
         业主服务
@@ -160,9 +163,10 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { gsap } from 'gsap'
 import { useDialogWidth } from '../composables/useDialogWidth'
 
 const registerDialogWidth = useDialogWidth(460)
@@ -171,6 +175,128 @@ import { Connection, Key, Lock, Message, User } from '@element-plus/icons-vue'
 import { login, guestLogin, register, requestPasswordReset, getPasswordResetStatus, getCaptcha } from '../api/auth'
 
 const router = useRouter()
+const loginPageRef = ref(null)
+let ctx
+
+onMounted(() => {
+  if (!loginPageRef.value) return
+  ctx = gsap.context(() => {
+    // 品牌面板滑入
+    gsap.from('.brand-panel', {
+      x: -80,
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power3.out',
+      clearProps: 'all'
+    })
+    // 品牌面板内元素依次淡入
+    gsap.from('.brand-badge', {
+      y: 20,
+      opacity: 0,
+      duration: 0.5,
+      delay: 0.3,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.brand-panel h1', {
+      y: 30,
+      opacity: 0,
+      duration: 0.6,
+      delay: 0.5,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.brand-panel p', {
+      y: 30,
+      opacity: 0,
+      duration: 0.6,
+      delay: 0.7,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    // 登录卡片滑入
+    gsap.from('.login-card', {
+      x: 80,
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power3.out',
+      clearProps: 'all'
+    })
+    // 登录卡片内元素依次淡入
+    gsap.from('.card-head', {
+      y: 20,
+      opacity: 0,
+      duration: 0.5,
+      delay: 0.4,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.login-card .el-form-item', {
+      y: 25,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.12,
+      delay: 0.5,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.remember-row', {
+      y: 20,
+      opacity: 0,
+      duration: 0.4,
+      delay: 0.9,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.login-button', {
+      y: 20,
+      opacity: 0,
+      duration: 0.5,
+      delay: 1.0,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    gsap.from('.register-entry, .forgot-entry, .guest-entry', {
+      y: 15,
+      opacity: 0,
+      duration: 0.4,
+      stagger: 0.1,
+      delay: 1.1,
+      ease: 'power2.out',
+      clearProps: 'all'
+    })
+    // 浮动圆圈持续动画
+    gsap.to('.circle-1', {
+      y: 20,
+      x: -10,
+      duration: 4,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+    gsap.to('.circle-2', {
+      y: -15,
+      x: 10,
+      duration: 5,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+    gsap.to('.circle-3', {
+      y: 12,
+      x: -8,
+      duration: 3.5,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+  }, loginPageRef.value)
+})
+
+onUnmounted(() => {
+  ctx?.revert()
+})
+
 const loginFormRef = ref()
 const registerFormRef = ref()
 const loading = ref(false)
@@ -457,6 +583,7 @@ const copyTempPassword = () => {
 }
 
 .brand-panel {
+  position: relative;
   min-height: 420px;
   padding: 48px;
   border-radius: 24px;
@@ -468,6 +595,34 @@ const copyTempPassword = () => {
   background-blend-mode: multiply;
   box-shadow: 0 16px 48px rgba(17, 98, 191, 0.18);
   overflow: hidden;
+}
+
+.floating-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.circle-1 {
+  width: 200px;
+  height: 200px;
+  top: -60px;
+  right: -40px;
+}
+
+.circle-2 {
+  width: 140px;
+  height: 140px;
+  bottom: -30px;
+  left: -20px;
+}
+
+.circle-3 {
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  right: 20%;
 }
 
 .brand-badge {
@@ -527,6 +682,16 @@ const copyTempPassword = () => {
   border-radius: 14px;
   background: linear-gradient(120deg, #1178ff, #13bea7);
   font-weight: 700;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(17, 120, 255, 0.35);
+}
+
+.login-button:active {
+  transform: translateY(0);
 }
 
 .remember-row {
@@ -551,6 +716,7 @@ const copyTempPassword = () => {
   background: transparent;
   font-weight: 700;
   cursor: pointer;
+  transition: color 0.2s ease;
 }
 
 .register-entry button:hover {
@@ -588,9 +754,12 @@ const copyTempPassword = () => {
   color: #5a6f85;
   background: #fff;
   font-weight: 600;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .guest-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(17, 120, 255, 0.15);
   color: #1178ff;
   border-color: #b3d8ff;
   background: #f0f7ff;

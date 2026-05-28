@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell feedback-page">
+  <div class="page-shell feedback-page" ref="pageRef">
     <section class="intro-card">
       <div class="intro-icon">
         <el-icon><EditPen /></el-icon>
@@ -50,9 +50,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { gsap } from 'gsap'
 import { EditPen } from '@element-plus/icons-vue'
 import { getMyFeedback } from '../../api/feedback'
+
+const pageRef = ref(null)
+let ctx
 
 const currentStatus = ref('全部')
 const statusOptions = ['全部', '待处理', '处理中', '已处理', '已忽略']
@@ -79,6 +83,28 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  if (!pageRef.value) return
+  ctx = gsap.context(() => {
+    // 介绍卡片入场
+    gsap.from('.intro-card', { y: -30, opacity: 0, duration: 0.7, ease: 'power3.out', clearProps: 'all' })
+
+    // 状态标签依次出现
+    gsap.from('.status-tabs button', { y: 20, opacity: 0, duration: 0.4, stagger: 0.08, delay: 0.3, ease: 'power2.out', clearProps: 'all' })
+
+    // 反馈卡片入场
+    gsap.from('.feedback-card', { y: 40, opacity: 0, duration: 0.5, stagger: 0.1, delay: 0.5, ease: 'power2.out', clearProps: 'all' })
+  }, pageRef.value)
+})
+
+onUnmounted(() => {
+  ctx?.revert()
+})
+
+// 状态切换时重新动画卡片
+watch(currentStatus, async () => {
+  await nextTick()
+  gsap.from('.feedback-card', { y: 25, opacity: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out', clearProps: 'all' })
 })
 </script>
 

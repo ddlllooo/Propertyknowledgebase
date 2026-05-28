@@ -19,7 +19,7 @@
       </el-menu>
     </el-aside>
 
-    <el-container>
+    <el-container class="main-container">
       <el-header class="admin-header">
         <div class="admin-header-left">
           <button v-if="isMobile" class="hamburger" @click="drawerVisible = true">
@@ -136,21 +136,21 @@ const handleLogout = async () => {
 
 <style scoped>
 .admin-layout {
-  min-height: 100vh;
+  height: 100vh;
   background:
     radial-gradient(circle at 6% 4%, rgba(17, 120, 255, 0.09), transparent 28%),
     radial-gradient(circle at 94% 10%, rgba(19, 190, 167, 0.1), transparent 30%),
     #f5f8fb;
+  overflow: hidden;
 }
 
 .admin-sidebar {
-  position: sticky;
-  top: 0;
   height: 100vh;
   padding: 24px 18px;
   border-right: 1px solid rgba(210, 225, 237, 0.86);
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(18px);
+  overflow-y: auto;
 }
 
 .admin-logo {
@@ -277,9 +277,15 @@ const handleLogout = async () => {
   background: linear-gradient(135deg, #1178ff, #13bea7);
 }
 
+.main-container {
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .admin-main {
   min-height: calc(100vh - 82px);
   padding: 30px;
+  overflow-y: auto;
 }
 
 /* Drawer menu */

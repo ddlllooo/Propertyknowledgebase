@@ -17,7 +17,7 @@
       </el-menu>
     </el-aside>
 
-    <el-container>
+    <el-container class="main-container">
       <el-header class="topbar">
         <div class="topbar-left">
           <button v-if="isMobile" class="hamburger" @click="drawerVisible = true">
@@ -143,18 +143,18 @@ const handleCommand = async (command) => {
 
 <style scoped>
 .user-layout {
-  min-height: 100vh;
+  height: 100vh;
   background: #f4f8fb;
+  overflow: hidden;
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
   height: 100vh;
   padding: 24px 18px;
   border-right: 1px solid rgba(207, 224, 237, 0.85);
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(18px);
+  overflow-y: auto;
 }
 
 .logo {
@@ -275,8 +275,14 @@ const handleCommand = async (command) => {
   background: linear-gradient(135deg, #1178ff, #13bea7);
 }
 
+.main-container {
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .content {
   padding: 28px;
+  overflow-y: auto;
 }
 
 /* Drawer menu */
